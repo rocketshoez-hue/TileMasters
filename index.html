@@ -2501,6 +2501,7 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
                             area: sumArea,
                             subName: `매지(${color})`,
                             subQty: totalKg,
+                            rawSubQty: aggregated[color],
                             subUnit: "kg",
                             tabType: "magi",
                             mFactor: 1.0,
@@ -2576,6 +2577,7 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
                 area: h,
                 subName: subName,
                 subQty: subQty,
+                rawSubQty: parseFloat(document.getElementById('resRaw').innerText.replace(/[^0-9.]/g, '')) || 0,
                 subUnit: subUnit,
                 tabType: currentTab,
                 mFactor: mFactor,
@@ -2635,18 +2637,27 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
             area.classList.remove('hidden');
             container.innerHTML = reportData.map((item, i) => {
 
-                // 💡 혜린 패치: 타일이 붙는 4대 시공(본드, 에폭시, 떠붙임, 바닥압착)이 아니면 타일 정보는 무조건 숨김!
+                // 💡 혜린 패치: 타일이 붙는 4대 시공이 아니면 타일 정보 숨김
                 let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
-
                 let tileInfo = isSpecial ? '' : `<div style="font-size:0.75rem;">📦 타일: ${item.tile}박스 [${item.spec}${item.tileDesign !== '기본' ? ' - ' + item.tileDesign : ''}]</div>`;
 
+                // 💡 [여기가 수정된 핵심 로직]
+                // 저장된 소수점 원본(rawSubQty)이 있으면 그걸 쓰고, 없으면 기존 수량을 씁니다.
+                let rawNum = parseFloat(item.rawSubQty);
+                let displayQty = isNaN(rawNum) ? item.subQty : rawNum.toFixed(1);
+                
+                // 클립(clip)일 경우 "암수 각각 0.3" 처럼 예쁘게 표시
+                if (item.tabType === 'clip' && !isNaN(rawNum)) {
+                    displayQty = "암수 각각 " + displayQty;
+                }
+
                 return `
-        <div class="added-item" onmousedown="startPress(${i})" onmouseup="endPress()" ontouchstart="startPress(${i})" ontouchend="endPress()">
-            <div style="font-weight:900; color:var(--primary); margin-bottom:5px;">[ ${item.idName} ]</div>
-            ${tileInfo}
-            <div style="font-size:0.75rem;">🛠️ ${item.subName}: ${item.subQty}${item.subUnit}</div>
-            <span class="del-btn" style="position:absolute; top:12px; right:15px;" onclick="event.stopPropagation(); removeReport(${i})">삭제</span>
-        </div>`;
+                <div class="added-item" onmousedown="startPress(${i})" onmouseup="endPress()" ontouchstart="startPress(${i})" ontouchend="endPress()">
+                    <div style="font-weight:900; color:var(--primary); margin-bottom:5px;">[ ${item.idName} ]</div>
+                    ${tileInfo}
+                    <div style="font-size:0.75rem;">🛠️ ${item.subName}: ${displayQty}${item.subUnit}</div>
+                    <span class="del-btn" style="position:absolute; top:12px; right:15px;" onclick="event.stopPropagation(); removeReport(${i})">삭제</span>
+                </div>`;
             }).join('');
         }
         function startPress(i) { editIdx = i; pressTimer = setTimeout(() => { openNameModal(); }, 700); }
@@ -2818,6 +2829,8 @@ window.confirmEditName = function () {
             reportData.forEach((item, index) => {
                 let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
                 let tileBoxInt = parseInt(item.tile) || 0;
+                let rawNum = parseFloat(item.rawSubQty || item.subQty);
+                let displayQty = (item.tabType === 'clip' ? '암수 각각 ' : '') + (isNaN(rawNum) ? item.subQty : rawNum.toFixed(1));
                 let tileDesignStr = (item.tileDesign && item.tileDesign !== '기본') ? `(${item.tileDesign})` : '';
                 let tileInfo = isSpecial ? "" : `타일: ${tileBoxInt}박스 [${item.spec} ${tileDesignStr}] / `;
                 let priceTxt = "";
@@ -2843,11 +2856,11 @@ window.confirmEditName = function () {
                 if (item.tabType === 'magi') totalMagiKgForLabor += subQtyNum;
 
                 html += `<div style="margin-bottom:10px; border-bottom:1px solid #222; padding-bottom:5px;">
-            <div style="color:var(--primary); font-weight:bold; cursor:pointer;" onclick="editReportItemName(${index})">[ ${item.idName} ] <span style="font-size:0.7rem; color:#888;">✏️</span></div>
-            <div style="font-size:0.9rem;">${tileInfo}${item.subName}: ${item.subQty}${item.subUnit}${priceTxt}</div>
-        </div>`;
-                text += `${item.idName}: ${tileInfo}${item.subName} ${item.subQty}${item.subUnit}\n`;
-            });
+        <div ...>[ ${item.idName} ] ...</div>
+        <div style="font-size:0.9rem;">${tileInfo}${item.subName}: ${displayQty}${item.subUnit}${priceTxt}</div>
+    </div>`;
+    text += `${item.idName}: ${tileInfo}${item.subName} ${displayQty}${item.subUnit}\n`;
+});
 
             const ppBags = Math.max(1, Math.ceil((totalAreaForLabor / 3.3) / 5)); // 최소 1포 보장    html += `<div style="margin-top:15px; padding:12px; background:#111; border-radius:10px; border:1.5px solid var(--primary);"><div style="color:var(--primary); font-weight:900;">♻️ 예상 폐기물 마대 (PP)</div><div style="font-size:1.1rem; font-weight:bold;">약 ${ppBags}포 필요 <small style="color:#aaa; font-size:0.7rem;">(5평당 1포 기준)</small></div></div>`;
             text += `\n♻️ 예상 폐기물 마대: 약 ${ppBags}포 (전체 ${totalAreaForLabor.toFixed(1)}m² 기준)\n`;
@@ -2906,6 +2919,53 @@ const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: t
                 html += `<div style="font-size:1.2rem; font-weight:900; color:#ff4444; margin-top:8px; border-top:1px solid #444; padding-top:8px;">총 합계: ${Math.round(totalGrand).toLocaleString()}원</div></div>`;
                 text += `총 합계: ${Math.round(totalGrand).toLocaleString()}원\n`;
             }
+
+// --- 📦 부자재 통합 합산 로직 시작 ---
+// --- 📦 부자재 통합 합산 로직 (누락 없는 완전판) ---
+let subTotalBucket = {}; 
+
+reportData.forEach(item => {
+    let name = item.subName;
+    let unit = item.subUnit;
+    
+    // 1. 소수점 정밀 합산 대상 (본드, 에폭시, 떠붙임, 압착)
+    let isDecimalTarget = ['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType);
+
+    if (!subTotalBucket[name]) {
+        subTotalBucket[name] = { totalValue: 0, unit: unit, isDecimal: isDecimalTarget };
+    }
+
+    if (isDecimalTarget) {
+        // [알뜰 합산] 소수점 원본을 그대로 누적
+        subTotalBucket[name].totalValue += (parseFloat(item.rawSubQty) || 0);
+    } else {
+        // [안전 합산] 이미 올림 된 정수(subQty)를 누적 (레미탈, 매지, 클립 등)
+        // subQty에 "암수 각각" 같은 문자가 섞여 있을 수 있으므로 숫자만 추출합니다.
+        let qtyMatch = item.subQty.toString().match(/[0-9.]+/);
+        let qtyNum = qtyMatch ? parseFloat(qtyMatch[0]) : 0;
+        subTotalBucket[name].totalValue += qtyNum;
+    }
+});
+
+// HTML 및 카톡 텍스트 생성
+let summaryHtml = `<div style="margin-top:20px; padding:15px; background:#1a1a1a; border:2px solid #ffd700; border-radius:15px; text-align:left;">
+    <div style="color:#ffd700; font-weight:900; margin-bottom:10px; font-size:1rem;">📦 부자재 통합 발주 요약</div>`;
+let summaryText = `\n[📦 부자재 통합 발주 요약]\n`;
+
+for (let name in subTotalBucket) {
+    let itemData = subTotalBucket[name];
+    // 본드류만 마지막에 올림 처리, 나머지는 이미 정수 합산임
+    let finalQty = itemData.isDecimal ? Math.ceil(itemData.totalValue) : itemData.totalValue;
+    
+    summaryHtml += `<div style="font-size:0.95rem; margin-bottom:5px;">✅ ${name}: <b style="color:#ff4444; font-size:1.1rem;">${finalQty}</b>${itemData.unit}</div>`;
+    summaryText += `✅ ${name}: ${finalQty}${itemData.unit}\n`;
+}
+summaryHtml += `</div>`;
+
+html += summaryHtml;
+text += summaryText;
+
+// --- 📦 부자재 통합 합산 로직 끝 ---
 
             let history = JSON.parse(localStorage.getItem('tile_history') || "[]");
             let now = new Date().getTime();
@@ -3534,7 +3594,7 @@ const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: t
         function calculateFinal() {
             const area = (slopeState.w * slopeState.l) / 1000000; const slope = parseFloat(document.getElementById('slope_val').value), loss = parseFloat(document.getElementById('slope_loss_rate').value); const maxSize = Math.max(slopeState.w, slopeState.l); let grid = (maxSize < 3000) ? 15 : (maxSize < 5000) ? 20 : 25; const cellArea = area / (grid * grid); let totalVolume = 0; const doorBias = 0.2;
             for (let i = 0; i < grid; i++) { for (let j = 0; j < grid; j++) { const zX = (slopeState.w / grid) * (i + 0.5), zY = (slopeState.l / grid) * (j + 0.5); let minDist = Infinity; let distA = Infinity; let distB = Infinity; slopeState.drains.forEach((d, idx) => { const dx = d.fx ?? d.x; const dy = d.fy ?? d.y; const d_dist = Math.sqrt((dx - zX) ** 2 + (dy - zY) ** 2); if (idx === 0) distA = d_dist; if (idx === 1) distB = d_dist; if (d_dist < minDist) minDist = d_dist; }); const distToDoor = Math.sqrt((slopeState.doorX - zX) ** 2 + (slopeState.doorY - zY) ** 2); const baseDist = Math.max(150, minDist); const effectiveDist = baseDist + (distToDoor * doorBias * 0.3); let h = slopeState.hBase + (effectiveDist * slope); if (slopeState.drains.length === 2) { const diff = Math.abs(distA - distB); if (diff < 300) { h += ((300 - diff) / 300) * 10; } } totalVolume += cellArea * h; } }
-            const rawBags = (totalVolume * 2.1 / 40) * loss; const finalBags = Math.ceil(rawBags); let dDoorToClosest = Infinity; slopeState.drains.forEach(d => { const dx = d.fx ?? d.x; const dy = d.fy ?? d.y; const dist = Math.sqrt((dx - slopeState.doorX) ** 2 + (dy - slopeState.doorY) ** 2); if (dist < dDoorToClosest) dDoorToClosest = dist; }); const doorBaseDist = Math.max(150, dDoorToClosest); const doorH = slopeState.hBase + (doorBaseDist * slope * 1.1); const avgThickness = (totalVolume / area).toFixed(1); slopeState.result = { area, finalBags, avgThickness, doorH }; showSlopeResultModal();
+            const rawBags = (totalVolume * 2.1 / 40) * loss; const finalBags = Math.ceil(rawBags); let dDoorToClosest = Infinity; slopeState.drains.forEach(d => { const dx = d.fx ?? d.x; const dy = d.fy ?? d.y; const dist = Math.sqrt((dx - slopeState.doorX) ** 2 + (dy - slopeState.doorY) ** 2); if (dist < dDoorToClosest) dDoorToClosest = dist; }); const doorBaseDist = Math.max(150, dDoorToClosest); const doorH = slopeState.hBase + (doorBaseDist * slope * 1.1); const avgThickness = (totalVolume / area).toFixed(1); slopeState.result = { area, finalBags, avgThickness, doorH, rawBags }; showSlopeResultModal();
         }
         function showSlopeResultModal() { const r = slopeState.result; const g3 = (r.doorH + 12).toFixed(1); const g6 = (r.doorH + 25).toFixed(1); const modalHtml = `<div class="modal-content"><div style="color:var(--primary); font-size:1.1rem; font-weight:900; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">📋 정밀 산출 결과</div><div class="res-main" style="color:#d32f2f; margin: 10px 0; font-size:3.5rem;">${r.finalBags}<span style="font-size:1.5rem; color:#fff;"> 포</span></div><div style="margin-bottom: 20px; font-size: 0.9rem; color: #aaa;">바닥 전체 평균 두께: <b style="color:#fff;">${r.avgThickness}</b> mm</div><div style="background: #111; padding: 15px; border-radius: 12px; text-align: left; border-left: 4px solid var(--primary); margin-bottom: 20px;"><div style="color:#fff; font-weight:bold; margin-bottom:8px; font-size:0.85rem;">📍 예상 문틀 마감 높이 (레미탈+타일)</div><div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#ccc; font-size:0.85rem;"><span>300각 시공 시</span><b style="color:var(--primary); font-size:1rem;">${g3}mm</b></div><div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem;"><span>600각 시공 시</span><b style="color:var(--primary); font-size:1rem;">${g6}mm</b></div></div><div style="display:flex; gap:8px; margin-bottom: 10px;"><button class="action-btn" style="background:#333; color:var(--primary); border:1px solid #555;" onclick="adjustDrainHeight()">유가높이 수정</button></div><button class="action-btn done-btn" style="width:100%; font-weight:900;" onclick="addSlopeToReport()">내역에 추가</button></div>`; const modalEl = document.getElementById('slopeResultModal'); modalEl.innerHTML = modalHtml; modalEl.classList.remove('hidden'); }
         function adjustDrainHeight() { document.getElementById('newDrainHeightInput').value = slopeState.hBase; document.getElementById('adjustDrainModal').classList.remove('hidden'); document.getElementById('newDrainHeightInput').focus(); }
@@ -3577,6 +3637,7 @@ const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: t
                 area: totalTileArea.toFixed(2),
                 subName: `레미탈(물매/평균${r.avgThickness}mm)`,
                 subQty: r.finalBags,
+                rawSubQty: r.rawBags,
                 subUnit: '포',
                 tabType: 'remital',
                 mFactor: mFactor,
