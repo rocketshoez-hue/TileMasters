@@ -55,6 +55,10 @@
             font-size: 0.75rem;
             font-weight: bold;
             cursor: pointer;
+            white-space: nowrap; /* 💡 핵심 1: 절대 두 줄로 줄바꿈 되지 않게 강제 고정 */
+            font-size: 0.8rem;   /* 💡 핵심 2: 폰트 크기를 살짝 줄임 (기존보다 작게) */
+            letter-spacing: -0.5px; /* 💡 핵심 3: 글자 사이 간격을 살짝 좁혀서 공간 확보 */
+            padding: 8px 10px;   /* (선택) 좌우 여백이 너무 크다면 10px 정도로 줄여주세요 */
         }
 
         /* 카드 공통 레이아웃 */
