@@ -1768,20 +1768,28 @@
             <div id="qc_tab_2" class="qc-content">
                 <div class="qc-input-row"><label>타일 수량(박스)</label><input type="number" id="qc_mat_box" placeholder="박스 수"></div>
                 <div class="qc-input-row">
-    <label>갈갈이 미리수</label>
-    <select id="qc_mat_trowel">
-        <option value="0.7">5mm</option>
-        <option value="1.0" selected>7~8mm</option>
-        <option value="1.3">10mm</option>
-        <option value="1.6">12mm</option>
-        <option value="2.0">15mm</option>
-        <option value="2.8">20mm</option>
-        <option value="3.5">25mm</option>
-        <option value="4.2">30mm</option>
-        <option value="4.9">35mm</option>
-        <option value="5.6">40mm</option>
-    </select>
-</div>
+                    <label>갈갈이 미리수</label>
+                    <select id="qc_mat_trowel">
+                        <option value="0.7">5mm</option>
+                        <option value="1.0" selected>7~8mm</option>
+                        <option value="1.3">10mm</option>
+                        <option value="1.6">12mm</option>
+                        <option value="2.0">15mm</option>
+                        <option value="2.8">20mm</option>
+                        <option value="3.5">25mm</option>
+                        <option value="4.2">30mm</option>
+                        <option value="4.9">35mm</option>
+                        <option value="5.6">40mm</option>
+                    </select>
+                </div>
+                <div class="qc-input-row">
+                    <label>포당 무게(kg)</label>
+                    <select id="qc_mat_weight">
+                        <option value="15">15kg</option>
+                        <option value="20">20kg</option>
+                        <option value="25" selected>25kg</option>
+                    </select>
+                </div>
                 <button class="action-btn" style="width:100%; background:#333; color:white; border:1px solid #555; margin-top:10px;" onclick="calcQCMat('sera')">본드(세라픽스) 계산</button>
                 <button class="action-btn" style="width:100%; background:#333; color:white; border:1px solid #555; margin-top:5px;" onclick="calcQCMat('press')">압착/폴리머 계산</button>
                 <div class="qc-result"><b id="qc_res_mat" style="font-size:1.5rem; color:var(--primary);">-</b></div>
@@ -4378,17 +4386,23 @@ function calcQCArea(type) {
     }
 }
 
-// [탭 2] 부자재 계산
+// [탭 2] 부자재 계산 (포당 무게 연동)
 function calcQCMat(type) {
     let box = parseFloat(document.getElementById('qc_mat_box').value || 0);
     let trowel = parseFloat(document.getElementById('qc_mat_trowel').value || 1.0);
+    let weight = parseFloat(document.getElementById('qc_mat_weight').value || 25); // 선택된 kg값
     let res = "";
+
     if (type === 'sera') {
+        // 본드(세라픽스)는 보통 17~20kg 통 단위이므로 기존 로직(박스당 약 4.7헤베) 유지
         let tong = (box / 4.7) * trowel;
         res = `본드: ${Math.ceil(tong)}통 <span style="font-size:1rem; color:#aaa;">(정밀: ${tong.toFixed(1)})</span>`;
     } else {
-        let po = (box / 4.6) * trowel * 1.0;
-        res = `압착: ${Math.ceil(po)}포 <span style="font-size:1rem; color:#aaa;">(정밀: ${po.toFixed(1)})</span>`;
+        // 1. 기존 25kg 기준 소요 포수 계산
+        let po_25 = (box / 4.6) * trowel;
+        // 2. 총 무게(kg)로 환산 후, 선택한 포당 무게로 나눔
+        let po_actual = (po_25 * 25) / weight;
+        res = `압착(${weight}kg): ${Math.ceil(po_actual)}포 <span style="font-size:1rem; color:#aaa;">(정밀: ${po_actual.toFixed(1)})</span>`;
     }
     document.getElementById('qc_res_mat').innerHTML = res;
 }
@@ -4453,7 +4467,9 @@ function clearQCFields() {
     document.getElementById('qc_res_box').innerHTML = `0 <span style="font-size:1rem; color:#aaa;">(정밀: 0.0)</span>`;
     
     // [탭 2] 부자재
-    document.getElementById('qc_mat_box').value = ""; document.getElementById('qc_res_mat').innerHTML = "-";
+    document.getElementById('qc_mat_box').value = ""; 
+    document.getElementById('qc_mat_weight').value = "25";
+    document.getElementById('qc_res_mat').innerHTML = "-";
     
     // [탭 3] 라운드
     document.getElementById('qc_r_w1').value = ""; document.getElementById('qc_r_h').value = "";
