@@ -2829,17 +2829,18 @@ function finishAndShow(isUpdate = false) {
 
             let isEst = document.getElementById('estMode') ? document.getElementById('estMode').checked : false;
             const site = document.getElementById('siteName').value || "현장 미지정";
-            let totalAreaForLabor = 0, totalMagiKgForLabor = 0;
+            
+            // 변수 초기화 (에러 방지)
+            let totalAreaSum = 0, totalMagiKg = 0, totalBoxNum = 0;
             let totalTilePriceSum = 0, totalSubMatPriceSum = 0;
 
             let html = `<h3 onclick="editReportSiteName()" style="color:var(--primary); border-bottom:1px solid #333; padding-bottom:10px; cursor:pointer;">📍 ${site} <span style="font-size:0.7rem; color:#888;">✏️</span></h3>`;
             let text = `[발주서] ${site}\n`;
 
-            // 중복 방지: 변수는 여기서 딱 한 번만 선언합니다.
             let tileBucket = {}; 
             let subTotalBucket = {}; 
 
-            // 1. 개별 내역 렌더링 (소수점 표시 및 바구니 담기)
+            // 1. 개별 내역 렌더링 및 수량 누적
             reportData.forEach((item, index) => {
                 let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
                 let tileBoxInt = parseInt(item.tile) || 0;
@@ -2857,20 +2858,22 @@ function finishAndShow(isUpdate = false) {
                 </div>`;
                 text += `${item.idName}: ${tileInfo}${item.subName} ${displayQty}${item.subUnit}\n`;
 
-                totalAreaForLabor += parseFloat(item.area || 0);
+                // 인건비용 총합 계산
+                totalAreaSum += parseFloat(item.area || 0);
+                if (['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType)) totalBoxNum += tileBoxInt;
                 if (item.tabType === 'magi') {
                     let qtyMatch = item.subQty.toString().match(/[0-9.]+/);
-                    totalMagiKgForLabor += qtyMatch ? parseFloat(qtyMatch[0]) : 0;
+                    totalMagiKg += qtyMatch ? parseFloat(qtyMatch[0]) : 0;
                 }
 
-                // 타일 바구니 담기
+                // 타일 바구니
                 if (!isSpecial && tileBoxInt > 0) {
                     let tileName = `${item.spec}${item.tileDesign && item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
                     if (!tileBucket[tileName]) tileBucket[tileName] = { qty: 0, price: item.tilePrice || 0 };
                     tileBucket[tileName].qty += tileBoxInt;
                 }
 
-                // 부자재 바구니 담기
+                // 부자재 바구니
                 let name = item.subName;
                 let isDecimalTarget = ['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType);
 
@@ -2886,7 +2889,7 @@ function finishAndShow(isUpdate = false) {
                 }
             });
 
-            // 2. 통합 발주 요약 및 최종 자재비 산출
+            // 2. 통합 발주 요약 생성 (여기서 금액 계산)
             let summaryHtml = `<div style="margin-top:20px; padding:15px; background:#1a1a1a; border:2px solid #ffd700; border-radius:15px; text-align:left;">
                 <div style="color:#ffd700; font-weight:900; margin-bottom:10px; font-size:1.1rem;">📦 통합 발주 요약 및 자재비</div>`;
             let summaryText = `\n[📦 통합 발주 요약 및 자재비]\n`;
@@ -2912,51 +2915,71 @@ function finishAndShow(isUpdate = false) {
                 summaryText += `✅ ${name}: ${prefix}${finalQty}${itemData.unit}\n`;
             }
             summaryHtml += `</div>`;
-            html += summaryHtml; text += summaryText;
+            
+            // 절대 지우면 안 되는 그 코드! 화면에 요약창을 붙입니다.
+            html += summaryHtml; 
+            text += summaryText;
             
             let totalMatPrice = totalTilePriceSum + totalSubMatPriceSum;
 
-            // 3. 기타 마감 로직 (폐기물, 인건비 등 - 기존 유지)
-            const ppBags = Math.max(1, Math.ceil((totalAreaForLabor / 3.3) / 5));
+            // 3. 폐기물 및 인건비 계산 (팀장님 오리지널 로직 완벽 복구)
+            const ppBags = Math.max(1, Math.ceil((totalAreaSum / 3.3) / 5));
             html += `<div style="margin-top:15px; padding:12px; background:#111; border-radius:10px; border:1.5px solid var(--primary);"><div style="color:var(--primary); font-weight:900;">♻️ 예상 폐기물 마대 (PP)</div><div style="font-size:1.1rem; font-weight:bold;">약 ${ppBags}포 필요 <small style="color:#aaa; font-size:0.7rem;">(5평당 1포 기준)</small></div></div>`;
-            text += `\n♻️ 예상 폐기물 마대: 약 ${ppBags}포 (전체 ${totalAreaForLabor.toFixed(1)}m² 기준)\n`;
+            text += `\n♻️ 예상 폐기물 마대: 약 ${ppBags}포 (전체 ${totalAreaSum.toFixed(1)}m² 기준)\n`;
 
             if (isEst) {
-                let techPum = Math.ceil(totalAreaForLabor / 21.48);
-                let magiPum = Math.ceil(totalMagiKgForLabor / 25);
+                let techPum = Math.ceil(totalAreaSum / 21.48);
+                let magiPum = Math.ceil(totalMagiKg / 25);
                 let numTrucks = Math.ceil(ppBags / 50);
-                let totalBoxForLabor = 0;
-                reportData.forEach(item => { if (['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType)) totalBoxForLabor += parseInt(item.tile) || 0; });
-                const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: totalAreaForLabor, totalBox: totalBoxForLabor, techPum });
+                
+                let laborMode = localStorage.getItem('labor_mode') || 'pum';
+                let techCost = 0, tLabel = "", tQty = 0, tPrice = 0;
+                
+                if (laborMode === 'pum') { tPrice = getPriceStr('price_tech_pum'); tQty = techPum; tLabel = "기공(품)"; }
+                else if (laborMode === 'pyeong') { tPrice = getPriceStr('price_tech_pyeong'); tQty = totalBoxNum / 2; tLabel = "기공(평)"; }
+                else { tPrice = getPriceStr('price_tech_hebe'); tQty = totalAreaSum; tLabel = "기공(헤베)"; }
+                
+                techCost = tQty * tPrice;
+                let techHtml = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원`;
+                let techText = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원\n`;
+
                 let magiLaborPrice = getPriceStr('price_magi_labor');
                 let bagPrice = getPriceStr('price_bag');
                 let truckPrice = getPriceStr('price_truck');
                 let mealPrice = getPriceStr('price_meal');
                 let miscPrice = getPriceStr('price_misc');
                 let marginRate = getPriceStr('price_margin');
+                
                 let magiCost = magiPum * magiLaborPrice;
                 let bagCost = ppBags * bagPrice;
                 let truckCost = numTrucks * truckPrice;
                 let appliedMealPum = (laborMode === 'pum') ? (techPum + magiPum) : magiPum;
                 let mealCost = appliedMealPum * mealPrice;
-                let subTotalGrand = totalMatPrice + techCost + magiCost + bagCost + truckCost + mealCost + miscPrice;
+                let miscCost = miscPrice;
+
+                let subTotalGrand = totalMatPrice + techCost + magiCost + bagCost + truckCost + mealCost + miscCost;
                 let marginCost = Math.round(subTotalGrand * (marginRate / 100));
                 let totalGrand = subTotalGrand + marginCost;
 
                 html += `<div style="border-top:1px dashed #444; padding-top:10px; margin-top:10px;"><div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">💰 견적 정산</div>`;
-                if (totalTilePriceSum > 0) html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원</div>`;
-                if (totalSubMatPriceSum > 0) html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원</div>`;
-                if (techCost > 0) html += `<div style="font-size:0.85rem;">${techHtml}</div>`;
-                if (magiPum > 0) html += `<div style="font-size:0.85rem;">매지: ${magiPum.toFixed(1)}품 x ${magiLaborPrice.toLocaleString()}원 = ${Math.round(magiCost).toLocaleString()}원</div>`;
-                if (mealCost > 0) html += `<div style="font-size:0.85rem;">식대: ${appliedMealPum.toFixed(1)}품 x ${mealPrice.toLocaleString()}원 = ${Math.round(mealCost).toLocaleString()}원</div>`;
-                if (bagCost > 0) html += `<div style="font-size:0.85rem;">마대: ${ppBags}포 x ${bagPrice.toLocaleString()}원 = ${Math.round(bagCost).toLocaleString()}원</div>`;
-                if (truckCost > 0) html += `<div style="font-size:0.85rem;">폐기물트럭: ${numTrucks}대 x ${truckPrice.toLocaleString()}원 = ${Math.round(truckCost).toLocaleString()}원</div>`;
-                if (miscPrice > 0) html += `<div style="font-size:0.85rem;">부대비용: ${Math.round(miscPrice).toLocaleString()}원</div>`;
-                if (marginRate > 0) html += `<div style="font-size:0.85rem;">마진(${marginRate}%): ${Math.round(marginCost).toLocaleString()}원</div>`;
+                if (totalTilePriceSum > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원</div>`; text += `타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원\n`; }
+                if (totalSubMatPriceSum > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원</div>`; text += `부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원\n`; }
+                
+                if (techCost > 0) { html += `<div style="font-size:0.85rem;">${techHtml}</div>`; text += techText; }
+
+                if (magiPum > 0) { html += `<div style="font-size:0.85rem;">매지: ${magiPum.toFixed(1)}품 x ${magiLaborPrice.toLocaleString()}원 = ${Math.round(magiCost).toLocaleString()}원</div>`; text += `매지: ${magiPum.toFixed(1)}품 (${Math.round(magiCost).toLocaleString()}원)\n`; }
+                if (mealCost > 0) { html += `<div style="font-size:0.85rem;">식대: ${appliedMealPum.toFixed(1)}품 x ${mealPrice.toLocaleString()}원 = ${Math.round(mealCost).toLocaleString()}원</div>`; text += `식대: ${appliedMealPum.toFixed(1)}품 (${Math.round(mealCost).toLocaleString()}원)\n`; }
+                if (bagCost > 0) { html += `<div style="font-size:0.85rem;">마대: ${ppBags}포 x ${bagPrice.toLocaleString()}원 = ${Math.round(bagCost).toLocaleString()}원</div>`; text += `마대: ${ppBags}포 (${Math.round(bagCost).toLocaleString()}원)\n`; }
+                if (truckCost > 0) { html += `<div style="font-size:0.85rem;">폐기물트럭: ${numTrucks}대 x ${truckPrice.toLocaleString()}원 = ${Math.round(truckCost).toLocaleString()}원</div>`; text += `폐기물트럭: ${numTrucks}대 (${Math.round(truckCost).toLocaleString()}원)\n`; }
+
+                if (miscPrice > 0) { html += `<div style="font-size:0.85rem;">부대비용: ${Math.round(miscCost).toLocaleString()}원</div>`; text += `부대비용: ${Math.round(miscCost).toLocaleString()}원\n`; }
+                if (marginRate > 0) { html += `<div style="font-size:0.85rem;">마진(${marginRate}%): ${Math.round(marginCost).toLocaleString()}원</div>`; text += `마진(${marginRate}%): ${Math.round(marginCost).toLocaleString()}원\n`; }
+
                 html += `<div style="font-size:1.2rem; font-weight:900; color:#ff4444; margin-top:8px; border-top:1px solid #444; padding-top:8px;">총 합계: ${Math.round(totalGrand).toLocaleString()}원</div></div>`;
-                text += `\n💰 견적 정산\n총 합계: ${Math.round(totalGrand).toLocaleString()}원\n`;
+                text += `총 합계: ${Math.round(totalGrand).toLocaleString()}원\n`;
             }
 
+            // 4. 히스토리 저장 및 화면 전환
             let history = JSON.parse(localStorage.getItem('tile_history') || "[]");
             let now = new Date().getTime();
             if (!sessionHistoryId) {
@@ -2977,139 +3000,6 @@ function finishAndShow(isUpdate = false) {
             document.getElementById('reportArea').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
-const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: totalAreaForLabor, totalBox: totalBoxForLabor, techPum });
-
-                let magiLaborPrice = getPriceStr('price_magi_labor');
-                let bagPrice = getPriceStr('price_bag');
-                let truckPrice = getPriceStr('price_truck');
-                let mealPrice = getPriceStr('price_meal');
-                let miscPrice = getPriceStr('price_misc');
-                let marginRate = getPriceStr('price_margin');
-
-                let magiCost = magiPum * magiLaborPrice;
-                let bagCost = ppBags * bagPrice;
-                let truckCost = numTrucks * truckPrice;
-
-                let mealCost = 0;
-                let appliedMealPum = (laborMode === 'pum') ? (techPum + magiPum) : magiPum;
-                mealCost = appliedMealPum * mealPrice;
-
-                let miscCost = miscPrice;
-
-                let subTotalGrand = totalMatPrice + techCost + magiCost + bagCost + truckCost + mealCost + miscCost;
-                let marginCost = Math.round(subTotalGrand * (marginRate / 100));
-                let totalGrand = subTotalGrand + marginCost;
-
-                html += `<div style="border-top:1px dashed #444; padding-top:10px; margin-top:10px;"><div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">💰 견적 정산</div>`;
-                if (totalTilePriceSum > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원</div>`; text += `타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원\n`; }
-                if (totalSubMatPriceSum > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원</div>`; text += `부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원\n`; }
-
-                if (techCost > 0) { html += `<div style="font-size:0.85rem;">${techHtml}</div>`; text += techText; }
-
-                if (magiPum > 0) { html += `<div style="font-size:0.85rem;">매지: ${magiPum.toFixed(1)}품 x ${magiLaborPrice.toLocaleString()}원 = ${Math.round(magiCost).toLocaleString()}원</div>`; text += `매지: ${magiPum.toFixed(1)}품 (${Math.round(magiCost).toLocaleString()}원)\n`; }
-                if (mealCost > 0) { html += `<div style="font-size:0.85rem;">식대: ${appliedMealPum.toFixed(1)}품 x ${mealPrice.toLocaleString()}원 = ${Math.round(mealCost).toLocaleString()}원</div>`; text += `식대: ${appliedMealPum.toFixed(1)}품 (${Math.round(mealCost).toLocaleString()}원)\n`; }
-
-                // 💡 혜린 패치: 폐기물 마대 & 트럭 비용이 발생하면 영수증에 표시!
-                if (bagCost > 0) { html += `<div style="font-size:0.85rem;">마대: ${ppBags}포 x ${bagPrice.toLocaleString()}원 = ${Math.round(bagCost).toLocaleString()}원</div>`; text += `마대: ${ppBags}포 (${Math.round(bagCost).toLocaleString()}원)\n`; }
-                if (truckCost > 0) { html += `<div style="font-size:0.85rem;">폐기물트럭: ${numTrucks}대 x ${truckPrice.toLocaleString()}원 = ${Math.round(truckCost).toLocaleString()}원</div>`; text += `폐기물트럭: ${numTrucks}대 (${Math.round(truckCost).toLocaleString()}원)\n`; }
-
-                if (miscPrice > 0) { html += `<div style="font-size:0.85rem;">부대비용: ${Math.round(miscCost).toLocaleString()}원</div>`; text += `부대비용: ${Math.round(miscCost).toLocaleString()}원\n`; }
-                if (marginRate > 0) { html += `<div style="font-size:0.85rem;">마진(${marginRate}%): ${Math.round(marginCost).toLocaleString()}원</div>`; text += `마진(${marginRate}%): ${Math.round(marginCost).toLocaleString()}원\n`; }
-
-                html += `<div style="font-size:1.2rem; font-weight:900; color:#ff4444; margin-top:8px; border-top:1px solid #444; padding-top:8px;">총 합계: ${Math.round(totalGrand).toLocaleString()}원</div></div>`;
-                text += `총 합계: ${Math.round(totalGrand).toLocaleString()}원\n`;
-            
-
-// --- 📦 통합 발주 요약 로직 (타일 + 부자재 전체 누락 방지) ---
-let tileBucket = {}; 
-let subTotalBucket = {}; 
-
-reportData.forEach(item => {
-    // 1. 타일 합산 (본드, 에폭시, 떠붙임, 압착 탭일 경우에만 타일이 존재함)
-    let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
-    let tileBoxInt = parseInt(item.tile) || 0;
-
-    if (!isSpecial && tileBoxInt > 0) {
-        let tileName = `${item.spec}${item.tileDesign && item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
-        if (!tileBucket[tileName]) tileBucket[tileName] = 0;
-        tileBucket[tileName] += tileBoxInt; // 타일은 정수 박스 그대로 누적
-    }
-
-    // 2. 부자재 및 기타 자재 합산
-    let name = item.subName;
-    let unit = item.subUnit;
-    let isDecimalTarget = ['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType);
-
-    if (!subTotalBucket[name]) {
-        subTotalBucket[name] = { totalValue: 0, unit: unit, isDecimal: isDecimalTarget, tabType: item.tabType };
-    }
-
-    if (isDecimalTarget) {
-        // [알뜰 합산] 소수점 정밀 합산 대상 (본드 등)
-        subTotalBucket[name].totalValue += (parseFloat(item.rawSubQty) || 0);
-    } else {
-        // [안전 합산] 이미 정수로 떨어진 애들 (레미탈, 매지, 코너비드, 클립, 면치기 등)
-        let qtyMatch = item.subQty.toString().match(/[0-9.]+/);
-        let qtyNum = qtyMatch ? parseFloat(qtyMatch[0]) : 0;
-        subTotalBucket[name].totalValue += qtyNum;
-    }
-});
-
-// HTML 및 카톡 텍스트 생성
-let summaryHtml = `<div style="margin-top:20px; padding:15px; background:#1a1a1a; border:2px solid #ffd700; border-radius:15px; text-align:left;">
-    <div style="color:#ffd700; font-weight:900; margin-bottom:10px; font-size:1.1rem;">📦 통합 발주 요약 (전체)</div>`;
-let summaryText = `\n[📦 통합 발주 요약 (전체)]\n`;
-
-// 타일 먼저 예쁘게 출력
-for (let tName in tileBucket) {
-    let tQty = tileBucket[tName];
-    summaryHtml += `<div style="font-size:0.95rem; margin-bottom:5px;">🟫 타일 [${tName}]: <b style="color:#ff4444; font-size:1.1rem;">${tQty}</b>박스</div>`;
-    summaryText += `🟫 타일 [${tName}]: ${tQty}박스\n`;
-}
-
-// 그 다음 부자재 및 기타 자재 출력
-for (let name in subTotalBucket) {
-    let itemData = subTotalBucket[name];
-    let finalQty = itemData.isDecimal ? Math.ceil(itemData.totalValue) : itemData.totalValue;
-    
-    // 평탄클립 예외 처리 ("암수 각각 3" -> 숫자 3만 뽑혔으므로 앞에 글자 다시 붙여줌)
-    let prefix = (itemData.tabType === 'clip') ? "암수 각각 " : "";
-
-    summaryHtml += `<div style="font-size:0.95rem; margin-bottom:5px;">✅ ${name}: <b style="color:#ff4444; font-size:1.1rem;">${prefix}${finalQty}</b>${itemData.unit}</div>`;
-    summaryText += `✅ ${name}: ${prefix}${finalQty}${itemData.unit}\n`;
-}
-summaryHtml += `</div>`;
-
-html += summaryHtml;
-text += summaryText;
-// --- 통합 발주 요약 로직 끝 ---
-
-            let history = JSON.parse(localStorage.getItem('tile_history') || "[]");
-            let now = new Date().getTime();
-            if (!sessionHistoryId) {
-                sessionHistoryId = now;
-                history.unshift({ id: sessionHistoryId, site, html, text, date: new Date().toLocaleString(), reportData: [...reportData] });
-            } else {
-                let idx = history.findIndex(h => h.id === sessionHistoryId);
-                if (idx > -1) {
-                    history[idx].site = site;
-                    history[idx].html = html;
-                    history[idx].text = text;
-                    history[idx].reportData = [...reportData];
-                    let updatedItem = history.splice(idx, 1)[0];
-                    history.unshift(updatedItem);
-                } else {
-                    history.unshift({ id: sessionHistoryId, site, html, text, date: new Date().toLocaleString(), reportData: [...reportData] });
-                }
-            }
-            localStorage.setItem('tile_history', JSON.stringify(history.slice(0, 100)));
-
-            document.getElementById('reportContent').innerHTML = html; window.finalText = text;
-            document.getElementById('mainUI').classList.add('hidden');
-            document.getElementById('reportArea').classList.remove('hidden');
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         
 
         function toggleCheckbox(i) {
@@ -3937,12 +3827,16 @@ function downloadExcel() {
             let isEst = document.getElementById('estMode').checked;
             let siteNameStr = document.getElementById('siteName').value || "현장 미지정";
 
-            let csv = "장소명,타일규격,타일수량(박스),면적(m2),부자재명,수량,단위\n";
+            // 💡 [핵심 무기] 스마트폰이든 뭐든 무조건 콤마를 찍어버리는 강제 콤마 제조기!
+            const comma = (n) => Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+            let csv = "sep=,\n장소명,타일규격,타일수량(박스),면적(m2),부자재명,수량,단위\n";
 
             let totalMatCost = 0;
             let tileBucket = {}; 
             let subTotalBucket = {}; 
 
+            // 1. 개별 내역 엑셀 출력
             reportData.forEach(item => {
                 let areaNum = parseFloat(item.area || 0);
                 totalAreaSum += areaNum;
@@ -3984,13 +3878,14 @@ function downloadExcel() {
             if (isEst) csv += ",단가,금액";
             csv += "\n";
             
+            // 2. 통합 발주 요약 출력 (강제 콤마 함수 적용)
             for (let tName in tileBucket) {
                 let tQty = tileBucket[tName].qty;
                 let tPrice = tileBucket[tName].price;
                 let tSum = tQty * tPrice;
                 if(isEst) totalMatCost += tSum;
                 csv += `"(타일) ${tName}",,"${tQty}","박스"`;
-                if(isEst) csv += `,"${tPrice}","${tSum}"`;
+                if(isEst) csv += `,"=""₩${comma(tPrice)}""","=""₩${comma(tSum)}"""`;
                 csv += `\n`;
             }
             
@@ -4001,7 +3896,7 @@ function downloadExcel() {
                 if(isEst) totalMatCost += sSum;
                 let prefix = (data.tabType === 'clip') ? "암수 각각 " : "";
                 csv += `"${sName}",,"${prefix}${finalQty}","${data.unit}"`;
-                if(isEst) csv += `,"${data.price}","${sSum}"`;
+                if(isEst) csv += `,"=""₩${comma(data.price)}""","=""₩${comma(sSum)}"""`;
                 csv += `\n`;
             }
 
@@ -4027,21 +3922,24 @@ function downloadExcel() {
                 let subTotal = totalMatCost + techCost + (magiPum * mPrice) + (ppBags * bPrice) + (numTrucks * trPrice) + (appliedMeal * mealPrice) + miscPrice;
                 let margin = Math.round(subTotal * (getPriceStr('price_margin') / 100));
 
+                // 3. 인건비 출력 (모든 비용에 강제 콤마 적용)
+               // 💡 맥북 엑셀이 콤마를 절대 못 지우게 ="₩1,000" 형태로 강제 고정합니다.
                 csv += `\n"--- 인건비 및 부대비용 ---"\n`;
-                csv += `"${tLabel}",,,,"${tQty.toFixed(1)}","품",,,,"${tPrice.toLocaleString()}","${Math.round(techCost).toLocaleString()}"\n`;
-                csv += `"매지품",,,,"${magiPum}","품",,,,"${mPrice.toLocaleString()}","${(magiPum * mPrice).toLocaleString()}"\n`;
-                csv += `"식대",,,,"${appliedMeal}","품",,,,"${mealPrice.toLocaleString()}","${(appliedMeal * mealPrice).toLocaleString()}"\n`;
-                csv += `"마대",,,,"${ppBags}","포",,,,"${bPrice.toLocaleString()}","${(ppBags * bPrice).toLocaleString()}"\n`;
-                csv += `"폐기물트럭",,,,"${numTrucks}","대",,,,"${trPrice.toLocaleString()}","${(numTrucks * trPrice).toLocaleString()}"\n`;
-                csv += `"부대비용",,,,"1","식",,,,"${miscPrice.toLocaleString()}","${miscPrice.toLocaleString()}"\n`;
-                csv += `"마진(${getPriceStr('price_margin')}%)",,,,,,,,,"${margin.toLocaleString()}"\n`;
-                csv += `"총합계",,,,,,,,,"${Math.round(subTotal + margin).toLocaleString()}"\n`;
+                csv += `"${tLabel}",,,,"${tQty.toFixed(1)}","품",,,,"=""₩${comma(tPrice)}""","=""₩${comma(techCost)}"""\n`;
+                csv += `"매지품",,,,"${magiPum}","품",,,,"=""₩${comma(mPrice)}""","=""₩${comma(magiPum * mPrice)}"""\n`;
+                csv += `"식대",,,,"${appliedMeal}","품",,,,"=""₩${comma(mealPrice)}""","=""₩${comma(appliedMeal * mealPrice)}"""\n`;
+                csv += `"마대",,,,"${ppBags}","포",,,,"=""₩${comma(bPrice)}""","=""₩${comma(ppBags * bPrice)}"""\n`;
+                csv += `"폐기물트럭",,,,"${numTrucks}","대",,,,"=""₩${comma(trPrice)}""","=""₩${comma(numTrucks * trPrice)}"""\n`;
+                csv += `"부대비용",,,,"1","식",,,,"=""₩${comma(miscPrice)}""","=""₩${comma(miscPrice)}"""\n`;
+                csv += `"마진(${getPriceStr('price_margin')}%)",,,,,,,,,"=""₩${comma(margin)}"""\n`;
+                csv += `"총합계",,,,,,,,,"=""₩${comma(subTotal + margin)}"""\n`;
             } else {
                 csv += `\n"예상 폐기물(PP마대)",,,"${totalAreaSum.toFixed(1)}",,,"${ppBags}","포"\n`;
             }
-            downloadCSV(csv, siteNameStr.replace(/ /g, "_") + "_발주서" + getTodayString());
-        }
-        
+            
+            // 파일명도 확실히 구별되게 변경
+            downloadCSV(csv, siteNameStr.replace(/ /g, "_") + "_발주서(찐최종)" + getTodayString());
+        }        
 
 // ▼ 혜린 패치: 안드로이드 네이티브 스타일 '뒤로가기 2번 종료 & 자동 저장' 완벽 제어 ▼
 let confirmCallbackYes = null;
