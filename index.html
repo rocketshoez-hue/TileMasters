@@ -3408,56 +3408,125 @@ const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: t
 
 
 
-// --- [3] 통합 현장용 진짜 엑셀 (XLSX) - 정렬/너비 보정판 ---
+// --- [3] 다세대 통합용 XLSX (개별 소수점 + 전체 취합 올림) ---
 function downloadIntegratedExcelXLSX() {
     updateIntegratedPricesBeforeRender();
     let isEst = document.getElementById('estMode').checked;
     let listNameStr = document.getElementById('integratedListName').value || "통합발주서";
-    let wsData = [["구분", "장소/현장명", "타일규격(종류)", "타일수량(박스)", "면적(m2)", "부자재명", "수량", "단위"]];
-    if (isEst) wsData[0].push("타일단가", "타일합계", "부자재단가", "부자재합계");
+    const boxArea = 1.44;
+
+    let wsData = [["구분", "장소/현장명", "타일규격(종류)", "타일수량(박스/소수점)", "면적(m2)", "부자재명", "부자재수량(소수점)", "단위"]];
+    if (isEst) wsData[0].push("단가", "금액");
 
     let tileAgg = {}, agg = {};
+
     integratedList.forEach(site => {
         site.reportData.forEach(item => {
-            let qtyNum = parseFloat(item.subQty.toString().match(/[0-9.]+/)?.[0]) || 0;
-            let tileBoxNum = parseInt(item.tile) || 0;
+            let areaNum = parseFloat(item.area) || 0;
+            let rawNum = parseFloat(item.rawSubQty) || 0;
             let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
-            if (!isSpecial && tileBoxNum > 0) {
-                let tKey = `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
+            let rawTileQty = isSpecial ? 0 : areaNum / boxArea;
+            let tKey = `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
+            
+            wsData.push(["개별현장", site.site, tKey, isSpecial?0:parseFloat(rawTileQty.toFixed(2)), areaNum, item.subName, parseFloat(rawNum.toFixed(2)), item.subUnit]);
+
+            if (!isSpecial && rawTileQty > 0) {
                 if (!tileAgg[tKey]) tileAgg[tKey] = { qty: 0, price: item.tilePrice || 0 };
-                tileAgg[tKey].qty += tileBoxNum;
+                tileAgg[tKey].qty += rawTileQty;
             }
             let subKey = item.subName;
             if (!agg[subKey]) agg[subKey] = { unit: item.subUnit, qty: 0, tabType: item.tabType, price: getPriceStr('price_'+item.tabType) };
-            agg[subKey].qty += qtyNum;
-
-            let row = ["개별현장", site.site, (isSpecial?"해당없음":item.spec), tileBoxNum, item.area, item.subName, item.subQty, item.subUnit];
-            if (isEst) row.push(item.tilePrice, item.tilePrice*tileBoxNum, agg[subKey].price, agg[subKey].price*qtyNum);
-            wsData.push(row);
+            agg[subKey].qty += rawNum;
         });
     });
 
+    // 💡 수정됨: 1번 사진과 똑같이 왼쪽 1열부터 깔끔하게 정렬!
+    wsData.push([], ["[최종 취합 발주 물량 - 올림 적용]"]);
+    let sumHeader = ["항목", "", "수량(올림)", "단위"];
+    if (isEst) sumHeader.push("단가", "금액");
+    wsData.push(sumHeader);
+
+    for (let key in tileAgg) {
+        let fQty = Math.ceil(tileAgg[key].qty);
+        let sum = tileAgg[key].price * fQty;
+        let row = [`(타일) ${key}`, "", fQty, "박스"];
+        if (isEst) row.push(tileAgg[key].price, sum);
+        wsData.push(row);
+    }
+    for (let key in agg) {
+        let fQty = Math.ceil(agg[key].qty);
+        let sum = agg[key].price * fQty;
+        let prefix = (agg[key].tabType === 'clip' ? "암수 각각 " : "");
+        let row = [key, prefix, fQty, agg[key].unit];
+        if (isEst) row.push(agg[key].price, sum);
+        wsData.push(row);
+    }
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{wch:10}, {wch:20}, {wch:25}, {wch:12}, {wch:10}, {wch:20}, {wch:10}, {wch:8}, {wch:12}, {wch:12}, {wch:12}, {wch:12}];
-    Object.keys(ws).forEach(key => {
-        if (key[0] === '!') return;
-        if (typeof ws[key].v === 'number') ws[key].z = '#,##0';
-    });
+    ws['!cols'] = [{wch:15}, {wch:15}, {wch:25}, {wch:12}, {wch:10}, {wch:20}, {wch:15}, {wch:8}];
+    Object.keys(ws).forEach(key => { if (key[0] !== '!' && typeof ws[key].v === 'number') ws[key].z = '#,##0'; });
     XLSX.utils.book_append_sheet(wb, ws, "통합발주");
     XLSX.writeFile(wb, listNameStr.replace(/ /g, "_") + "_통합발주.xlsx");
 }
 
-// --- [4] 통합 현장용 기존 CSV ---
+// --- [4] 다세대 통합용 CSV (숫자 따옴표 제거 완벽판) ---
 function downloadIntegratedExcelCSV() {
     updateIntegratedPricesBeforeRender();
+    let isEst = document.getElementById('estMode').checked;
     let listNameStr = document.getElementById('integratedListName').value || "통합발주서";
-    let csv = "sep=,\n구분,장소/현장명,타일규격,수량,면적,부자재명,부자재수량,단위\n";
+    const boxArea = 1.44;
+
+    let csv = "sep=,\n구분,장소/현장명,타일규격(종류),타일수량(박스/소수점),면적(m2),부자재명,부자재수량(소수점),단위";
+    if (isEst) csv += ",단가,금액";
+    csv += "\n";
+
+    let tileAgg = {}, agg = {};
+
     integratedList.forEach(site => {
         site.reportData.forEach(item => {
-            csv += `개별현장,"${site.site}","${item.spec}","${item.tile}","${item.area}","${item.subName}","${item.subQty}","${item.subUnit}"\n`;
+            let areaNum = parseFloat(item.area) || 0;
+            let rawNum = parseFloat(item.rawSubQty) || 0;
+            let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
+            let rawTileQty = isSpecial ? 0 : areaNum / boxArea;
+            let tKey = `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
+
+            // 💡 수정됨: 수량과 면적 등의 숫자 데이터에는 따옴표를 넣지 않음
+            csv += `개별현장,"${site.site}","${tKey}",${rawTileQty.toFixed(2)},${areaNum},"${item.subName}",${rawNum.toFixed(2)},"${item.subUnit}"`;
+            if (isEst) csv += ",,";
+            csv += "\n";
+
+            if (!isSpecial && rawTileQty > 0) {
+                if (!tileAgg[tKey]) tileAgg[tKey] = { qty: 0, price: item.tilePrice || 0 };
+                tileAgg[tKey].qty += rawTileQty;
+            }
+            let subKey = item.subName;
+            if (!agg[subKey]) agg[subKey] = { unit: item.subUnit, qty: 0, tabType: item.tabType, price: getPriceStr('price_'+item.tabType) };
+            agg[subKey].qty += rawNum;
         });
     });
+
+    // 💡 수정됨: 1번 사진과 똑같은 폼 유지 & 숫자에 따옴표 완전 제거
+    csv += "\n[최종 취합 발주 물량 - 올림 적용]\n항목,,수량(올림),단위";
+    if (isEst) csv += ",단가,금액";
+    csv += "\n";
+
+    for (let key in tileAgg) {
+        let fQty = Math.ceil(tileAgg[key].qty);
+        let sum = tileAgg[key].price * fQty;
+        csv += `"(타일) ${key}",,${fQty},박스`;
+        if (isEst) csv += `,${tileAgg[key].price},${sum}`;
+        csv += "\n";
+    }
+    for (let key in agg) {
+        let fQty = Math.ceil(agg[key].qty);
+        let sum = agg[key].price * fQty;
+        let prefix = (agg[key].tabType === 'clip' ? "암수 각각 " : "");
+        csv += `"${key}","${prefix}",${fQty},${agg[key].unit}`;
+        if (isEst) csv += `,${agg[key].price},${sum}`;
+        csv += "\n";
+    }
+
     downloadCSV(csv, listNameStr + "_통합발주(CSV)");
 }
 
@@ -3794,94 +3863,123 @@ function execDownload(type) {
     }
 }
 
-// --- [1] 개별 현장용 진짜 엑셀 (XLSX) - 정렬/너비 보정판 ---
+// --- [1] 개별 현장용 XLSX (상세 소수점 + 취합 올림) ---
 function downloadExcelXLSX() {
     updatePricesBeforeRender();
     let isEst = document.getElementById('estMode').checked;
     let siteNameStr = document.getElementById('siteName').value || "현장 미지정";
-    let wsData = [["장소명", "타일규격", "타일수량(박스)", "면적(m2)", "부자재명", "수량", "단위"]];
-    if (isEst) { wsData[0].push("단가", "금액"); }
+    const boxArea = parseFloat(document.getElementById('boxArea').value) || 1.44;
 
-    let totalAreaSum = 0, totalMagiKg = 0, totalMatCost = 0;
+    let wsData = [["장소명", "타일규격", "타일수량(박스/소수점)", "면적(m2)", "부자재명", "부자재수량(소수점)", "단위"]];
+    if (isEst) wsData[0].push("단가", "금액");
+
     let tileBucket = {}, subTotalBucket = {};
 
+    // 1. 개별 상세 내역 (소수점 유지)
     reportData.forEach(item => {
         let areaNum = parseFloat(item.area || 0);
-        totalAreaSum += areaNum;
-        let rawNum = parseFloat(item.rawSubQty);
-        let displayQty = isNaN(rawNum) ? item.subQty : parseFloat(rawNum.toFixed(1));
+        let rawNum = parseFloat(item.rawSubQty) || 0;
         let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
-        let tileBoxNum = isSpecial ? 0 : (parseInt(item.tile) || 0);
-        let tilePrint = isSpecial ? "해당없음" : `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
-        
-        if (item.tabType === 'magi') {
-            let qtyMatch = item.subQty.toString().match(/[0-9.]+/);
-            totalMagiKg += qtyMatch ? parseFloat(qtyMatch[0]) : 0;
-        }
+        let rawTileQty = isSpecial ? 0 : areaNum / boxArea;
+        let tKey = `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
 
-        let row = [item.idName, tilePrint, tileBoxNum, areaNum, item.subName, displayQty, item.subUnit];
+        let row = [item.idName, tKey, isSpecial ? 0 : parseFloat(rawTileQty.toFixed(2)), areaNum, item.subName, parseFloat(rawNum.toFixed(2)), item.subUnit];
         if (isEst) row.push("", ""); 
         wsData.push(row);
 
-        if (!isSpecial && tileBoxNum > 0) {
-            if (!tileBucket[tilePrint]) tileBucket[tilePrint] = { qty: 0, price: item.tilePrice || 0 };
-            tileBucket[tilePrint].qty += tileBoxNum;
+        // 취합용 데이터 수집 (원본 합산)
+        if (!isSpecial && rawTileQty > 0) {
+            if (!tileBucket[tKey]) tileBucket[tKey] = { qty: 0, price: item.tilePrice || 0 };
+            tileBucket[tKey].qty += rawTileQty;
         }
         let subKey = item.subName;
         if (!subTotalBucket[subKey]) {
-            subTotalBucket[subKey] = { totalValue: 0, unit: item.subUnit, isDecimal: ['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType), tabType: item.tabType, price: getPriceStr('price_' + item.tabType) };
+            subTotalBucket[subKey] = { totalValue: 0, unit: item.subUnit, tabType: item.tabType, price: getPriceStr('price_' + item.tabType) };
         }
-        subTotalBucket[subKey].totalValue += (subTotalBucket[subKey].isDecimal ? (parseFloat(item.rawSubQty) || 0) : (parseFloat(item.subQty.toString().match(/[0-9.]+/)?.[0]) || 0));
+        subTotalBucket[subKey].totalValue += rawNum;
     });
 
-    wsData.push([], ["[통합 발주 요약 및 자재비]"]);
-    let sumHeader = ["항목", "", "수량", "단위"];
+    // 2. 하단 취합 요약 (올림 처리)
+    wsData.push([], ["[최종 취합 자재 리스트 - 올림 적용]"]);
+    let sumHeader = ["항목", "", "수량(올림)", "단위"];
     if (isEst) sumHeader.push("단가", "금액");
     wsData.push(sumHeader);
 
     for (let tName in tileBucket) {
-        let tQty = tileBucket[tName].qty, tPrice = tileBucket[tName].price, tSum = tQty * tPrice;
-        if(isEst) totalMatCost += tSum;
-        let row = [`(타일) ${tName}`, "", tQty, "박스"];
-        if(isEst) row.push(tPrice, tSum);
+        let fQty = Math.ceil(tileBucket[tName].qty);
+        let row = [`(타일) ${tName}`, "", fQty, "박스"];
+        if (isEst) row.push(tileBucket[tName].price, fQty * tileBucket[tName].price);
         wsData.push(row);
     }
     for (let sName in subTotalBucket) {
-        let d = subTotalBucket[sName], fQty = d.isDecimal ? Math.ceil(d.totalValue) : d.totalValue, sSum = fQty * d.price;
-        if(isEst) totalMatCost += sSum;
-        let row = [sName, (d.tabType === 'clip' ? "암수 각각" : ""), fQty, d.unit];
-        if(isEst) row.push(d.price, sSum);
+        let d = subTotalBucket[sName];
+        let fQty = Math.ceil(d.totalValue);
+        let row = [sName, (d.tabType === 'clip' ? "암수 각각 " : ""), fQty, d.unit];
+        if (isEst) row.push(d.price, fQty * d.price);
         wsData.push(row);
     }
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // 💡 정렬 및 너비 설정
-    const wscols = [{wch:15}, {wch:25}, {wch:15}, {wch:10}, {wch:20}, {wch:10}, {wch:8}, {wch:12}, {wch:15}];
-    ws['!cols'] = wscols;
-
-    Object.keys(ws).forEach(key => {
-        if (key[0] === '!') return;
-        if (typeof ws[key].v === 'number') ws[key].z = '#,##0'; // 숫자 콤마
-    });
-
+    ws['!cols'] = [{wch:15}, {wch:25}, {wch:15}, {wch:10}, {wch:20}, {wch:15}, {wch:8}];
+    Object.keys(ws).forEach(key => { if (key[0] !== '!' && typeof ws[key].v === 'number') ws[key].z = '#,##0'; });
     XLSX.utils.book_append_sheet(wb, ws, "발주서");
-    XLSX.writeFile(wb, siteNameStr.replace(/ /g, "_") + "_발주서.xlsx");
+    XLSX.writeFile(wb, siteNameStr.replace(/ /g, "_") + "_상세발주.xlsx");
 }
 
-// --- [2] 개별 현장용 기존 CSV (호환성용) ---
+// --- [2] 개별 현장용 CSV (상세 소수점 + 취합 올림 - XLSX와 내용 동일) ---
 function downloadExcelCSV() {
     updatePricesBeforeRender();
+    let isEst = document.getElementById('estMode').checked;
     let siteNameStr = document.getElementById('siteName').value || "현장 미지정";
-    const comma = (n) => Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    let csv = "sep=,\n장소명,타일규격,타일수량(박스),면적(m2),부자재명,수량,단위\n";
+    const boxArea = parseFloat(document.getElementById('boxArea').value) || 1.44;
+
+    let csv = "sep=,\n장소명,타일규격,타일수량(박스/소수점),면적(m2),부자재명,부자재수량(소수점),단위";
+    if (isEst) csv += ",단가,금액";
+    csv += "\n";
+
+    let tileBucket = {}, subTotalBucket = {};
+
     reportData.forEach(item => {
+        let areaNum = parseFloat(item.area || 0);
+        let rawNum = parseFloat(item.rawSubQty) || 0;
         let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
-        let tilePrint = isSpecial ? "해당없음" : `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
-        csv += `"${item.idName}","${tilePrint}","${item.tile}","${item.area}","${item.subName}","${item.subQty}","${item.subUnit}"\n`;
+        let rawTileQty = isSpecial ? 0 : areaNum / boxArea;
+        let tKey = `${item.spec}${item.tileDesign !== '기본' ? ' (' + item.tileDesign + ')' : ''}`;
+
+        csv += `"${item.idName}","${tKey}","${rawTileQty.toFixed(2)}","${areaNum}","${item.subName}","${rawNum.toFixed(2)}","${item.subUnit}"`;
+        if (isEst) csv += ",,";
+        csv += "\n";
+
+        if (!isSpecial && rawTileQty > 0) {
+            if (!tileBucket[tKey]) tileBucket[tKey] = { qty: 0, price: item.tilePrice || 0 };
+            tileBucket[tKey].qty += rawTileQty;
+        }
+        let subKey = item.subName;
+        if (!subTotalBucket[subKey]) {
+            subTotalBucket[subKey] = { totalValue: 0, unit: item.subUnit, tabType: item.tabType, price: getPriceStr('price_' + item.tabType) };
+        }
+        subTotalBucket[subKey].totalValue += rawNum;
     });
-    downloadCSV(csv, siteNameStr + "_발주서(CSV)");
+
+    csv += "\n[최종 취합 자재 리스트 - 올림 적용]\n항목,,수량(올림),단위";
+    if (isEst) csv += ",단가,금액";
+    csv += "\n";
+
+    for (let tName in tileBucket) {
+        let fQty = Math.ceil(tileBucket[tName].qty);
+        csv += `"(타일) ${tName}",,"${fQty}","박스"`;
+        if (isEst) csv += `,"${tileBucket[tName].price}","${fQty * tileBucket[tName].price}"`;
+        csv += "\n";
+    }
+    for (let sName in subTotalBucket) {
+        let d = subTotalBucket[sName];
+        let fQty = Math.ceil(d.totalValue);
+        csv += `"${sName}","${d.tabType === 'clip' ? '암수 각각 ' : ''}","${fQty}","${d.unit}"`;
+        if (isEst) csv += `,"${d.price}","${fQty * d.price}"`;
+        csv += "\n";
+    }
+    downloadCSV(csv, siteNameStr + "_상세발주(CSV)");
 }      
 
 // ▼ 혜린 패치: 안드로이드 네이티브 스타일 '뒤로가기 2번 종료 & 자동 저장' 완벽 제어 ▼
