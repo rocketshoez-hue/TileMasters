@@ -711,7 +711,33 @@
             z-index: 10001 !important;
         }
 
-        
+        /* ⚡ 간편 계산기 전용 스타일 */
+        .qc-tab-container {
+            display: flex; gap: 4px; background: #222; padding: 4px; 
+            border-radius: 10px; margin-bottom: 15px;
+        }
+        .qc-tab {
+            flex: 1; text-align: center; padding: 10px 0; font-size: 0.75rem; 
+            font-weight: bold; color: #888; cursor: pointer; border-radius: 8px; transition: 0.2s;
+        }
+        .qc-tab.active { background: var(--primary); color: #000; }
+        .qc-content { display: none; text-align: left; }
+        .qc-content.active { display: block; }
+        .qc-history-box {
+            max-height: 100px; overflow-y: auto; background: #111; border: 1px solid #333; 
+            border-radius: 8px; padding: 8px; font-size: 0.75rem; color: #ccc; margin-bottom: 10px;
+        }
+        .qc-input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .qc-input-row label { flex: 1; font-size: 0.8rem; color: #bbb; font-weight: bold; }
+        .qc-input-row input, .qc-input-row select { 
+            flex: 2; padding: 10px; background: #111; border: 1px solid #444; 
+            color: #fff; border-radius: 6px; text-align: center; 
+        }
+        .qc-result {
+            background: rgba(255,215,0,0.1); border: 1px dashed var(--primary); 
+            padding: 15px; border-radius: 8px; text-align: center; margin-top: 15px;
+        }
+
     </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -724,8 +750,9 @@
             <h2 style="margin:0; font-size:1.0rem; color:var(--primary); line-height:1.2;">TILES MASTERS<br>DIRECTORS
                 BOARD</h2>
             <div style="display:flex; gap:6px;">
-                <button class="history-btn" onclick="openSettings()">⚙️ 단가</button>
-                <button class="history-btn" onclick="openHistory()">📂 기록</button>
+                <button class="history-btn" onclick="openSettings()">⚙️ 단가설정</button>
+                <button class="history-btn" onclick="openHistory()">📂 지난기록</button>
+                <button class="history-btn" style="color:#fff; border-color:#fff; background:#222;" onclick="openQuickCalc()">⚡ 간편계산기</button>
             </div>
         </div>
 
@@ -1705,6 +1732,142 @@
                 <button class="action-btn done-btn" style="font-weight:900;" onclick="execDownload('xlsx')">XLSX (엑셀)</button>
             </div>
             <button class="action-btn" style="width:100%; background:#2a2a2a; color:#888; border:1px solid #444;" onclick="document.getElementById('downloadModal').classList.add('hidden')">닫기</button>
+        </div>
+    </div>
+
+<div id="quickCalcModal" class="modal hidden" style="z-index: 9999;">
+        <div class="modal-content" style="width:90%; max-width:400px;">
+            <h3 style="color:var(--primary); margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚡ 타일 간편 계산기</h3>
+            
+            <div class="qc-tab-container">
+                <div class="qc-tab active" onclick="switchQCTab(1)">면적/박스</div>
+                <div class="qc-tab" onclick="switchQCTab(2)">부자재</div>
+                <div class="qc-tab" onclick="switchQCTab(3)">라운드(R)</div>
+                <div class="qc-tab" onclick="switchQCTab(4)">할증(%)</div>
+            </div>
+
+<div id="qc_tab_1" class="qc-content active">
+                <div class="qc-input-row"><label>박스당 헤베(m²)</label><input type="number" id="qc_box_area" value="1.44" oninput="calcQCArea('m2')"></div>
+                
+                <div style="font-size:0.75rem; color:var(--primary); margin-bottom:5px; font-weight:bold;">📐 치수 입력 (가로/세로 중 하나만 넣고 아래 면적을 써도 역산됩니다)</div>
+                <div class="qc-input-row" style="gap:4px;">
+                    <input type="number" id="qc_w" placeholder="가로(mm)" oninput="calcQCArea('dim')">
+                    <span style="color:#888; font-weight:bold;">×</span>
+                    <input type="number" id="qc_h" placeholder="세로(mm)" oninput="calcQCArea('dim')">
+                </div>
+
+                <div class="qc-input-row"><label>시공 면적(m²)</label><input type="number" id="qc_m2" placeholder="헤베 입력" oninput="calcQCArea('m2')"></div>
+                <div class="qc-input-row"><label>시공 평수(평)</label><input type="number" id="qc_py" placeholder="평수 입력" oninput="calcQCArea('py')"></div>
+                <div class="qc-result"><span style="color:#aaa; font-size:0.8rem;">필요 수량</span><br><b id="qc_res_box" style="font-size:2rem; color:var(--primary);">0</b> <span style="color:#fff;">박스</span></div>
+                <button class="action-btn done-btn" style="width:100%; margin-top:10px;" onclick="saveQCLog('면적/박스', document.getElementById('qc_res_box').innerText + '박스')">결과 기록하기</button>
+            </div>
+            <div id="qc_tab_2" class="qc-content">
+                <div class="qc-input-row"><label>타일 수량(박스)</label><input type="number" id="qc_mat_box" placeholder="박스 수"></div>
+                <div class="qc-input-row">
+    <label>갈갈이 미리수</label>
+    <select id="qc_mat_trowel">
+        <option value="0.7">5mm</option>
+        <option value="1.0" selected>7~8mm</option>
+        <option value="1.3">10mm</option>
+        <option value="1.6">12mm</option>
+        <option value="2.0">15mm</option>
+        <option value="2.8">20mm</option>
+        <option value="3.5">25mm</option>
+        <option value="4.2">30mm</option>
+        <option value="4.9">35mm</option>
+        <option value="5.6">40mm</option>
+    </select>
+</div>
+                <button class="action-btn" style="width:100%; background:#333; color:white; border:1px solid #555; margin-top:10px;" onclick="calcQCMat('sera')">본드(세라픽스) 계산</button>
+                <button class="action-btn" style="width:100%; background:#333; color:white; border:1px solid #555; margin-top:5px;" onclick="calcQCMat('press')">압착/폴리머 계산</button>
+                <div class="qc-result"><b id="qc_res_mat" style="font-size:1.5rem; color:var(--primary);">-</b></div>
+                <button class="action-btn done-btn" style="width:100%; margin-top:10px;" onclick="saveQCLog('부자재', document.getElementById('qc_res_mat').innerText)">결과 기록하기</button>
+            </div>
+
+            <div id="qc_tab_3" class="qc-content">
+                
+                <div style="margin-bottom:15px; padding:10px; background:#111; border-radius:10px; border:1px solid #333;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="color:var(--primary); font-weight:bold; font-size:1.1rem;">[1] 볼록 라운드 (바닥)</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <div style="flex:1.3; text-align:center; position:relative;">
+                            <svg width="100%" max-width="120" viewBox="0 0 120 120" stroke-width="3" fill="none">
+                                <path d="M 10 110 L 10 20 L 30 20 A 80 80 0 0 1 110 100 L 110 110 Z" fill="#faeeb4" stroke="#333"/>
+                                <line x1="30" y1="20" x2="110" y2="100" stroke="#ff4d4d" stroke-width="4"/>
+                                <text x="50" y="75" fill="#ff4d4d" font-size="16" font-weight="bold" stroke="none">W</text>
+                                <line x1="70" y1="60" x2="86.6" y2="43.4" stroke="#4dabf7" stroke-width="4"/>
+                                <text x="83" y="65" fill="#4dabf7" font-size="14" font-weight="bold" stroke="none">H</text>
+                            </svg>
+                        </div>
+                        <div style="flex:1.7;">
+                            <input type="number" id="qc_r_w1" placeholder="빨강 W (폭)" style="width:100%; padding:12px 8px; margin-bottom:6px; border-left:4px solid #ff4d4d; font-size:0.9rem;" oninput="autoCalcR1()">
+                            <input type="number" id="qc_r_h" placeholder="파랑 H (깊이)" style="width:100%; padding:12px 8px; border-left:4px solid #4dabf7; font-size:0.9rem;" oninput="autoCalcR1()">
+                        </div>
+                    </div>
+                    <div style="text-align:right; margin-top:5px; font-size:1.1rem; font-weight:bold; letter-spacing:-0.5px;">
+                        <span style="color:#aaa; font-size:0.9rem;">반지름(컴퍼스 간격) =</span> <span id="qc_res_r1" style="color:var(--primary); font-size:1.8rem;">0</span> mm
+                    </div>
+                </div>
+
+                <div style="margin-bottom:10px; padding:10px; background:#111; border-radius:10px; border:1px solid #333;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="color:var(--primary); font-weight:bold; font-size:1.1rem;">[2] 오목 라운드 (기둥)</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <div style="flex:1.3; text-align:center; position:relative;">
+                            <svg width="100%" max-width="120" viewBox="0 0 120 120" stroke-width="3" fill="none">
+                                <path d="M 10 20 L 20 20 A 40 40 0 0 0 100 20 L 110 20 L 110 90 L 10 90 Z" fill="#faeeb4" stroke="#333"/>
+                                <line x1="20" y1="20" x2="100" y2="20" stroke="#ff4d4d" stroke-width="4"/>
+                                <text x="52" y="15" fill="#ff4d4d" font-size="16" font-weight="bold" stroke="none">W</text>
+                                <path d="M 20 20 A 40 40 0 0 0 100 20" fill="none" stroke="#4dabf7" stroke-width="4"/>
+                                <text x="55" y="75" fill="#4dabf7" font-size="16" font-weight="bold" stroke="none">L</text>
+                            </svg>
+                        </div>
+                        <div style="flex:1.7;">
+                            <input type="number" id="qc_r_w2" placeholder="빨강 W (직선 폭)" style="width:100%; padding:12px 8px; margin-bottom:6px; border-left:4px solid #ff4d4d; font-size:0.9rem;" oninput="autoCalcR2()">
+                            <input type="number" id="qc_r_l" placeholder="파랑 L (휜 길이)" style="width:100%; padding:12px 8px; border-left:4px solid #4dabf7; font-size:0.9rem;" oninput="autoCalcR2()">
+                        </div>
+                    </div>
+                    <div style="text-align:right; margin-top:5px; font-size:1.1rem; font-weight:bold; letter-spacing:-0.5px;">
+                        <span style="color:#aaa; font-size:0.9rem;">반지름(컴퍼스 간격) =</span> <span id="qc_res_r2" style="color:var(--primary); font-size:1.8rem;">0</span> mm
+                    </div>
+                </div>
+
+                <button class="action-btn done-btn" style="width:100%; margin-top:10px;" onclick="saveQCLog('라운드R', '바닥: ' + document.getElementById('qc_res_r1').innerText + 'mm / 기둥: ' + document.getElementById('qc_res_r2').innerText + 'mm')">결과 기록하기</button>
+            </div>
+
+            <div id="qc_tab_4" class="qc-content">
+                <div class="qc-input-row">
+                    <label>기준 값(수량/금액)</label>
+                    <input type="number" id="qc_margin_base" placeholder="43 또는 10000" oninput="calcQCMargin()">
+                </div>
+                <div class="qc-input-row">
+                    <label style="color:#ff6b6b;">할증 (+ %)</label>
+                    <input type="number" id="qc_margin_plus" placeholder="7" oninput="calcQCMargin()">
+                </div>
+                <div class="qc-input-row">
+                    <label style="color:#4dabf7;">할인 (- %)</label>
+                    <input type="number" id="qc_margin_minus" placeholder="5" oninput="calcQCMargin()">
+                </div>
+
+                <div class="qc-result">
+                    <span style="color:#aaa; font-size:0.8rem;">최종 결과값 (증감분)</span><br>
+                    <b id="qc_res_margin" style="font-size:1.8rem; color:var(--primary);">0</b>
+                </div>
+                <button class="action-btn done-btn" style="width:100%; margin-top:10px;" onclick="saveQCLog('할증계산', document.getElementById('qc_res_margin').innerText)">결과 기록하기</button>
+            </div>
+
+            <div style="margin-top:20px; text-align:left;">
+                <div style="font-size:0.75rem; color:var(--primary); margin-bottom:5px;">📝 임시 계산 기록</div>
+                <div id="qc_history_area" class="qc-history-box">기록이 없습니다.</div>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn" style="flex:1; background:#007bff; color:#fff;" onclick="copyQCLogs()">💬 카톡으로 전체 복사</button>
+                    <button class="action-btn" style="width:60px; background:#444; color:#fff;" onclick="clearQCFields()">지우기</button>
+                </div>
+            </div>
+
+            <button class="action-btn" style="width:100%; background:#2a2a2a; color:#888; border:1px solid #444; margin-top:10px;" onclick="closeQuickCalc()">닫기</button>
         </div>
     </div>
 
@@ -4144,6 +4307,178 @@ window.addEventListener('popstate', function (e) {
         reTrap();
     }, 2000);
 });// ▲ 여기까지 교체 완료 ▲
+
+// ==========================================
+// ⚡ 타일 간편 계산기 (독립 엔진 - 완성본)
+// ==========================================
+let qcLogs = [];
+
+function openQuickCalc() { document.getElementById('quickCalcModal').classList.remove('hidden'); }
+function closeQuickCalc() { document.getElementById('quickCalcModal').classList.add('hidden'); }
+
+function switchQCTab(tabNum) {
+    document.querySelectorAll('.qc-tab').forEach((t, i) => t.classList.toggle('active', i === tabNum - 1));
+    document.querySelectorAll('.qc-content').forEach((c, i) => c.classList.toggle('active', i === tabNum - 1));
+}
+
+// [탭 1] 면적/박스 (스마트 연동)
+function calcQCArea(type) {
+    let elW = document.getElementById('qc_w');
+    let elH = document.getElementById('qc_h');
+    let elM2 = document.getElementById('qc_m2');
+    let elPy = document.getElementById('qc_py');
+    let bArea = parseFloat(document.getElementById('qc_box_area').value) || 1.44;
+
+    let w = parseFloat(elW.value) || 0;
+    let h = parseFloat(elH.value) || 0;
+
+    if (type === 'dim') {
+        if (w > 0 && h > 0) {
+            let m2Val = (w * h) / 1000000;
+            elM2.value = m2Val.toFixed(2);
+            elPy.value = (m2Val / 3.3058).toFixed(2);
+        } else {
+            elM2.value = ""; elPy.value = "";
+        }
+    } else if (type === 'm2') {
+        let m2Val = parseFloat(elM2.value) || 0;
+        elPy.value = m2Val > 0 ? (m2Val / 3.3058).toFixed(2) : "";
+        if (m2Val > 0) {
+            if (w > 0 && h === 0) elH.value = Math.round((m2Val * 1000000) / w);
+            else if (h > 0 && w === 0) elW.value = Math.round((m2Val * 1000000) / h);
+        }
+    } else if (type === 'py') {
+        let pyVal = parseFloat(elPy.value) || 0;
+        let m2Val = pyVal * 3.3058;
+        elM2.value = pyVal > 0 ? m2Val.toFixed(2) : "";
+        if (m2Val > 0) {
+            if (w > 0 && h === 0) elH.value = Math.round((m2Val * 1000000) / w);
+            else if (h > 0 && w === 0) elW.value = Math.round((m2Val * 1000000) / h);
+        }
+    }
+
+    let finalM2 = parseFloat(elM2.value) || 0;
+    if (finalM2 > 0) {
+        let exactBox = finalM2 / bArea;
+        document.getElementById('qc_res_box').innerHTML = `${Math.ceil(exactBox)} <span style="font-size:1rem; color:#aaa;">(정밀: ${exactBox.toFixed(1)})</span>`;
+    } else {
+        document.getElementById('qc_res_box').innerHTML = `0 <span style="font-size:1rem; color:#aaa;">(정밀: 0.0)</span>`;
+    }
+}
+
+// [탭 2] 부자재 계산
+function calcQCMat(type) {
+    let box = parseFloat(document.getElementById('qc_mat_box').value || 0);
+    let trowel = parseFloat(document.getElementById('qc_mat_trowel').value || 1.0);
+    let res = "";
+    if (type === 'sera') {
+        let tong = (box / 4.7) * trowel;
+        res = `본드: ${Math.ceil(tong)}통 <span style="font-size:1rem; color:#aaa;">(정밀: ${tong.toFixed(1)})</span>`;
+    } else {
+        let po = (box / 4.6) * trowel * 1.0;
+        res = `압착: ${Math.ceil(po)}포 <span style="font-size:1rem; color:#aaa;">(정밀: ${po.toFixed(1)})</span>`;
+    }
+    document.getElementById('qc_res_mat').innerHTML = res;
+}
+
+// [탭 3] 바닥 라운드 자동 계산 (W, H)
+function autoCalcR1() {
+    let w = parseFloat(document.getElementById('qc_r_w1').value) || 0;
+    let h = parseFloat(document.getElementById('qc_r_h').value) || 0;
+    let R = 0;
+    if (h > 0 && w > 0) { R = (w * w) / (8 * h) + (h / 2); }
+    document.getElementById('qc_res_r1').innerText = R > 0 ? R.toFixed(1) : "0";
+}
+
+// [탭 3] 기둥 라운드 자동 계산 (L, W)
+function autoCalcR2() {
+    let L = parseFloat(document.getElementById('qc_r_l').value) || 0;
+    let W = parseFloat(document.getElementById('qc_r_w2').value) || 0;
+    let R = 0;
+    if (L > 0 && W > 0) {
+        if (W >= L) { 
+            document.getElementById('qc_res_r2').innerHTML = "<span style='font-size:1rem;color:#ff6b6b;'>L이 W보다 커야함</span>"; 
+            return; 
+        }
+        let minR = W / 2.0; let maxR = 100000;
+        for (let i = 0; i < 100; i++) {
+            R = (minR + maxR) / 2.0;
+            if (2 * R * Math.asin(W / (2 * R)) < L) maxR = R; else minR = R;
+        }
+    }
+    document.getElementById('qc_res_r2').innerText = R > 0 ? R.toFixed(1) : "0";
+}
+
+// [탭 4] 할증/할인 자동 계산 (증감분 포함)
+function calcQCMargin() {
+    let base = parseFloat(document.getElementById('qc_margin_base').value) || 0;
+    let plus = parseFloat(document.getElementById('qc_margin_plus').value) || 0;
+    let minus = parseFloat(document.getElementById('qc_margin_minus').value) || 0;
+    
+    if (base === 0) {
+        document.getElementById('qc_res_margin').innerText = "0";
+        return;
+    }
+    
+    // 할증과 할인을 모두 고려한 최종 수치 (순차 계산이 아닌 합산 비율 적용)
+    let netPercent = (plus - minus) / 100;
+    let res = base * (1 + netPercent);
+    let diff = res - base;
+    
+    // 천 단위 콤마 및 소수점 처리
+    let displayRes = res > 1000 ? Math.round(res).toLocaleString() : res.toFixed(2);
+    let displayDiff = diff >= 0 ? "+" + (diff > 1000 ? Math.round(diff).toLocaleString() : diff.toFixed(2)) 
+                                : (diff > 1000 ? Math.round(diff).toLocaleString() : diff.toFixed(2));
+    
+    document.getElementById('qc_res_margin').innerText = `${displayRes} (${displayDiff})`;
+}
+
+// ⚡ 간편 계산기 입력창 싹 비우기 (기록은 보존)
+function clearQCFields() {
+    // [탭 1] 면적/박스
+    document.getElementById('qc_w').value = ""; document.getElementById('qc_h').value = "";
+    document.getElementById('qc_m2').value = ""; document.getElementById('qc_py').value = "";
+    document.getElementById('qc_res_box').innerHTML = `0 <span style="font-size:1rem; color:#aaa;">(정밀: 0.0)</span>`;
+    
+    // [탭 2] 부자재
+    document.getElementById('qc_mat_box').value = ""; document.getElementById('qc_res_mat').innerHTML = "-";
+    
+    // [탭 3] 라운드
+    document.getElementById('qc_r_w1').value = ""; document.getElementById('qc_r_h').value = "";
+    document.getElementById('qc_r_l').value = ""; document.getElementById('qc_r_w2').value = "";
+    document.getElementById('qc_res_r1').innerText = "0"; document.getElementById('qc_res_r2').innerText = "0";
+    
+    // [탭 4] 할증 (플러스, 마이너스 칸 비우기 추가됨!)
+    document.getElementById('qc_margin_base').value = ""; 
+    document.getElementById('qc_margin_plus').value = ""; 
+    document.getElementById('qc_margin_minus').value = ""; 
+    document.getElementById('qc_res_margin').innerText = "0";
+    
+    showToast("입력창이 초기화되었습니다.");
+}
+
+// ⚡ 기록 저장 및 카톡 복사
+function saveQCLog(tag, resultText) {
+    let time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    let cleanText = resultText.replace(/<[^>]*>?/gm, ''); 
+    qcLogs.push(`[${time}] ${tag}: ${cleanText}`);
+    renderQCLogs(); showToast("기록에 추가되었습니다.");
+}
+
+function renderQCLogs() {
+    let box = document.getElementById('qc_history_area');
+    if(qcLogs.length === 0) box.innerText = "기록이 없습니다.";
+    else box.innerHTML = qcLogs.join('<br>');
+    box.scrollTop = box.scrollHeight;
+}
+
+function copyQCLogs() {
+    if(qcLogs.length === 0) { appAlert("복사할 기록이 없습니다."); return; }
+    let textToCopy = "==== 간편 계산 기록 ====\n" + qcLogs.join('\n');
+    const t = document.createElement("textarea"); document.body.appendChild(t); 
+    t.value = textToCopy; t.select(); document.execCommand('copy'); document.body.removeChild(t);
+    showToast("카카오톡 등에 붙여넣기 하세요!");
+}
 
     </script>
 </body>
