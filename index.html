@@ -3944,96 +3944,108 @@ function showToast(msg) {
     setTimeout(() => { toast.style.opacity = '0'; }, 2000);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    // 1. 앱 켜지자마자 URL 뒤에 #trap (덫) 달아두기
-    if (location.hash !== '#trap') {
-        history.replaceState(null, null, location.pathname + location.search + '#base');
-        history.pushState(null, null, location.pathname + location.search + '#trap');
+let isTrapSet = false;
+
+// 💡 방어막(덫) 설치 함수
+function setHistoryTrap() {
+    if (!isTrapSet) {
+        const baseUrl = location.href.split('#')[0];
+        history.replaceState(null, null, baseUrl + '#base');
+        history.pushState(null, null, baseUrl + '#trap');
+        isTrapSet = true;
     }
+}
+
+// 💡 핵심: 앱을 켜고 화면을 '처음 터치'할 때 몰래 덫을 칩니다! (보안 우회)
+window.addEventListener('touchstart', setHistoryTrap, { once: true });
+window.addEventListener('click', setHistoryTrap, { once: true });
+
+window.addEventListener('DOMContentLoaded', () => {
+    // 모달 스크롤 방지 로직 (기존 유지)
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('touchmove', (e) => {
+            if (e.target === modal) e.preventDefault();
+        }, { passive: false });
+    });
 
     const settingsModal = document.getElementById('settingsModal');
     if(settingsModal) {
         settingsModal.addEventListener('input', () => { isSettingsChanged = true; });
         settingsModal.addEventListener('change', () => { isSettingsChanged = true; });
     }
+});
 
-    // 2. 뒤로가기 버튼 낚아채기
-    window.addEventListener('popstate', function (e) {
-        
-        // 팝업 검사 전, #trap이 풀렸으므로 다시 덮어씌울 준비
-        const reTrap = () => history.pushState(null, null, location.pathname + location.search + '#trap');
+// 💡 뒤로가기 버튼 낚아채기
+window.addEventListener('popstate', function (e) {
+    const baseUrl = location.href.split('#')[0];
+    const reTrap = () => {
+        history.pushState(null, null, baseUrl + '#trap');
+        isTrapSet = true;
+    };
 
-        const confirmModal = document.getElementById('customConfirmModal');
-        if (confirmModal && !confirmModal.classList.contains('hidden')) {
-            execConfirmNo(); reTrap(); return;
-        }
+    const confirmModal = document.getElementById('customConfirmModal');
+    if (confirmModal && !confirmModal.classList.contains('hidden')) {
+        execConfirmNo(); reTrap(); return;
+    }
 
-        const alertModal = document.getElementById('customAlertModal');
-        if (alertModal && !alertModal.classList.contains('hidden')) {
-            closeCustomAlert(); reTrap(); return;
-        }
+    const alertModal = document.getElementById('customAlertModal');
+    if (alertModal && !alertModal.classList.contains('hidden')) {
+        closeCustomAlert(); reTrap(); return;
+    }
 
-        const openModals = Array.from(document.querySelectorAll('.modal:not(.hidden)'))
-            .filter(m => m.id !== 'customAlertModal' && m.id !== 'customConfirmModal');
+    const openModals = Array.from(document.querySelectorAll('.modal:not(.hidden)'))
+        .filter(m => m.id !== 'customAlertModal' && m.id !== 'customConfirmModal');
 
-        if (openModals.length > 0) {
-            const topModal = openModals[openModals.length - 1];
+    if (openModals.length > 0) {
+        const topModal = openModals[openModals.length - 1];
 
-            if (topModal.id === 'settingsModal') {
-                if (isSettingsChanged) {
-                    appConfirm("수정한 단가 설정이 있습니다.\n저장하고 닫으시겠습니까?", "저장 후 닫기", "저장 안 함",
-                        () => { saveAndCloseSettings(); reTrap(); },
-                        () => { 
-                            topModal.classList.add('hidden'); 
-                            isSettingsChanged = false; 
-                            loadSettings(); renderTileSettings(); 
-                            reTrap();
-                        } 
-                    );
-                } else {
-                    topModal.classList.add('hidden'); reTrap();
-                }
-            } else if (topModal.id === 'integratedModal') {
-                appConfirm("통합 리스트를 닫으시겠습니까?\n(자동 저장됩니다)", "닫기", "머무르기",
-                    () => { closeIntegratedModal(); reTrap(); },
-                    () => { reTrap(); }
+        if (topModal.id === 'settingsModal') {
+            if (isSettingsChanged) {
+                appConfirm("수정한 단가 설정이 있습니다.\n저장하고 닫으시겠습니까?", "저장 후 닫기", "저장 안 함",
+                    () => { saveAndCloseSettings(); reTrap(); },
+                    () => { 
+                        topModal.classList.add('hidden'); 
+                        isSettingsChanged = false; 
+                        loadSettings(); renderTileSettings(); 
+                        reTrap();
+                    } 
                 );
-            } else if (topModal.id === 'slopeAppModal') {
-                closeSlopeModal(); reTrap();
             } else {
                 topModal.classList.add('hidden'); reTrap();
             }
-            return;
+        } else if (topModal.id === 'integratedModal') {
+            appConfirm("통합 리스트를 닫으시겠습니까?\n(자동 저장됩니다)", "닫기", "머무르기",
+                () => { closeIntegratedModal(); reTrap(); },
+                () => { reTrap(); }
+            );
+        } else if (topModal.id === 'slopeAppModal') {
+            closeSlopeModal(); reTrap();
+        } else {
+            topModal.classList.add('hidden'); reTrap();
         }
+        return;
+    }
 
-        const reportArea = document.getElementById('reportArea');
-        if (reportArea && !reportArea.classList.contains('hidden')) {
-            goBackToMain(); reTrap();
-            return;
-        }
+    const reportArea = document.getElementById('reportArea');
+    if (reportArea && !reportArea.classList.contains('hidden')) {
+        goBackToMain(); reTrap();
+        return;
+    }
 
-        // 🚀 메인 화면에서 뒤로가기 눌렀을 때 (투 터치 종료 로직)
-        if (exitTimer) {
-            // 💡 2초 안에 한 번 더 누른 경우! 
-            // 방어막(trap)을 치지 않고 가만히 내버려 두면, 스마트폰(브라우저)이 스스로 앱을 완벽하게 꺼버립니다!
-            clearTimeout(exitTimer);
-            return; 
-        }
+    // 🚀 메인 화면에서 뒤로가기 눌렀을 때 (투 터치 종료 로직)
+    if (exitTimer) {
+        clearTimeout(exitTimer);
+        return; 
+    }
 
-        // 💡 첫 번째로 누른 경우
-        saveTempReport(); // 안전하게 뒤에서 알아서 저장해버림
-        showToast("✅ 임시저장 완료!\n종료하시려면 한 번 더 눌러주세요.");
-        
-        // 2초 동안 기다림
-        exitTimer = setTimeout(() => {
-            exitTimer = null;
-            // 2초 동안 안 누르면 "아 안 나갈 건가 보네" 하고 다시 덫(#trap) 설치
-            reTrap();
-        }, 2000);
-
-    });
-});
-// ▲ 여기까지 교체 완료 ▲
+    saveTempReport(); 
+    showToast("✅ 임시저장 완료!\n종료하시려면 한 번 더 눌러주세요.");
+    
+    exitTimer = setTimeout(() => {
+        exitTimer = null;
+        reTrap();
+    }, 2000);
+});// ▲ 여기까지 교체 완료 ▲
 
     </script>
 </body>
