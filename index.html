@@ -4341,7 +4341,9 @@ function switchQCTab(tabNum) {
     document.querySelectorAll('.qc-content').forEach((c, i) => c.classList.toggle('active', i === tabNum - 1));
 }
 
-// [탭 1] 면적/박스 (스마트 연동)
+let qcLastDim = 'w'; // 💡 추가: 가로/세로 중 기준이 되는 축을 기억하는 변수
+
+// [탭 1] 면적/박스 (실시간 역산 버그 완벽 수정판)
 function calcQCArea(type) {
     let elW = document.getElementById('qc_w');
     let elH = document.getElementById('qc_h');
@@ -4352,6 +4354,10 @@ function calcQCArea(type) {
     let w = parseFloat(elW.value) || 0;
     let h = parseFloat(elH.value) || 0;
 
+    // 💡 방금 터치한 칸이 가로면 가로를, 세로면 세로를 '기준축'으로 기억
+    if (document.activeElement.id === 'qc_w') qcLastDim = 'w';
+    if (document.activeElement.id === 'qc_h') qcLastDim = 'h';
+
     if (type === 'dim') {
         if (w > 0 && h > 0) {
             let m2Val = (w * h) / 1000000;
@@ -4360,20 +4366,28 @@ function calcQCArea(type) {
         } else {
             elM2.value = ""; elPy.value = "";
         }
-    } else if (type === 'm2') {
-        let m2Val = parseFloat(elM2.value) || 0;
-        elPy.value = m2Val > 0 ? (m2Val / 3.3058).toFixed(2) : "";
-        if (m2Val > 0) {
-            if (w > 0 && h === 0) elH.value = Math.round((m2Val * 1000000) / w);
-            else if (h > 0 && w === 0) elW.value = Math.round((m2Val * 1000000) / h);
+    } else if (type === 'm2' || type === 'py') {
+        let m2Val = 0;
+        if (type === 'm2') {
+            m2Val = parseFloat(elM2.value) || 0;
+            elPy.value = m2Val > 0 ? (m2Val / 3.3058).toFixed(2) : "";
+        } else if (type === 'py') {
+            let pyVal = parseFloat(elPy.value) || 0;
+            m2Val = pyVal * 3.3058;
+            elM2.value = pyVal > 0 ? m2Val.toFixed(2) : "";
         }
-    } else if (type === 'py') {
-        let pyVal = parseFloat(elPy.value) || 0;
-        let m2Val = pyVal * 3.3058;
-        elM2.value = pyVal > 0 ? m2Val.toFixed(2) : "";
+
+        // 💡 핵심 수정: 빈칸 여부(h===0)가 아니라, 기억해둔 '기준축'을 바탕으로 무조건 실시간 역산!
         if (m2Val > 0) {
-            if (w > 0 && h === 0) elH.value = Math.round((m2Val * 1000000) / w);
-            else if (h > 0 && w === 0) elW.value = Math.round((m2Val * 1000000) / h);
+            if (qcLastDim === 'w' && w > 0) {
+                elH.value = Math.round((m2Val * 1000000) / w);
+            } else if (qcLastDim === 'h' && h > 0) {
+                elW.value = Math.round((m2Val * 1000000) / h);
+            } else {
+                // 예외 처리 (둘 중 하나만 값이 있을 때)
+                if (w > 0) elH.value = Math.round((m2Val * 1000000) / w);
+                else if (h > 0) elW.value = Math.round((m2Val * 1000000) / h);
+            }
         }
     }
 
