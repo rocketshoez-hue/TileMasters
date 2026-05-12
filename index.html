@@ -2546,14 +2546,18 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
             const rawTotalArea = isNoTile ? 0 : (confirmedHebeSum + currentHebeInput + (boxQtyInput * boxArea));
             const tileLossRate = parseFloat(document.getElementById('tileLossRate').value);
             const totalArea = isNoTile ? 0 : rawTotalArea * tileLossRate;
-            const totalBox = isNoTile ? 0 : (totalArea / boxArea);
+            
+            // 💡 [수정] 레미탈 탭에서는 타일 박스 수량이 같이 연동되지 않도록 0으로 고정합니다.
+            const totalBox = (isNoTile || currentTab === 'remital') ? 0 : (totalArea / boxArea);
 
             document.getElementById('resDetailHebe').innerText = totalArea.toFixed(2);
-            document.getElementById('resDetailBox').innerText = totalBox > 0 ? Math.ceil(totalBox) : "0";
+            
+            // 💡 [수정] 레미탈일 때는 숫자 대신 '-' 로 표시해 비활성화된 느낌을 줍니다.
+            document.getElementById('resDetailBox').innerText = (currentTab === 'remital') ? "-" : (totalBox > 0 ? Math.ceil(totalBox) : "0");
             
             // 💡 타일 정밀 수치(박스) 표시
             if (document.getElementById('resRawBoxNum')) {
-                document.getElementById('resRawBoxNum').innerText = totalBox > 0 ? totalBox.toFixed(1) : "0.0";
+                document.getElementById('resRawBoxNum').innerText = (currentTab === 'remital') ? "-" : (totalBox > 0 ? totalBox.toFixed(1) : "0.0");
             }
 
             const units = { 'sera': '통', 'epoxy': '조', 'ddu': '포', 'remital': '포', 'press': '포', 'magi': 'kg', 'myeon': 'm', 'bead': '개', 'clip': '봉' };
@@ -3095,8 +3099,10 @@ let displayQty = item.subQty;
                 }
 
                 // 부자재 바구니
-                let name = item.subName;
-                let isDecimalTarget = ['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType);
+                // 💡 레미탈은 두께가 달라도 '레미탈'이라는 이름으로 하나로 합칩니다.
+                let isRemital = (item.tabType === 'remital');
+                let name = isRemital ? "레미탈" : item.subName;
+                let isDecimalTarget = ['sera', 'epoxy', 'ddu', 'press', 'remital'].includes(item.tabType);
 
                 if (!subTotalBucket[name]) {
                     subTotalBucket[name] = { totalValue: 0, unit: item.subUnit, isDecimal: isDecimalTarget, tabType: item.tabType, price: getPriceStr('price_' + item.tabType) };
@@ -3489,9 +3495,14 @@ let displayQty = item.subQty;
                         tileAgg[tKey].qty += itemTileRounded;
                     }
 
-                    let subKey = item.subName;
+                    // 💡 통합 발주에서도 레미탈을 하나의 항목으로 통합하고 정밀 수치로 합산합니다.
+                    let isRemitalSub = (item.tabType === 'remital');
+                    let subKey = isRemitalSub ? "레미탈" : item.subName;
                     if (!agg[subKey]) agg[subKey] = { unit: item.subUnit, qty: 0, tabType: item.tabType };
-                    agg[subKey].qty += qtyNum;
+                    
+                    // 정밀수치(rawSubQty)가 있다면 그걸로 합산해야 오차가 없습니다.
+                    let addQty = (isRemitalSub && item.rawSubQty) ? parseFloat(item.rawSubQty) : qtyNum;
+                    agg[subKey].qty += addQty;
 
                     // 💡 통합 발주 화면에서도 코너비드/면치기 원본 수량 유지!
                     let displayQty = item.subQty;
@@ -3520,7 +3531,7 @@ let displayQty = item.subQty;
                     // 💡 item.subQty 대신 보호받은 displayQty를 화면과 텍스트에 출력
                     html += `<div style="font-size:0.85rem; color:#ccc;">- [${item.idName}] ${tileInfo}${item.subName}: ${displayQty}${item.subUnit}${priceTxt}</div>`;
                     integratedTextResult += `- [${item.idName}] ${tileInfo}${item.subName}: ${displayQty}${item.subUnit}\n`;
-                    
+
                 });
                 html += `</div>`;
                 integratedTextResult += `\n`;
