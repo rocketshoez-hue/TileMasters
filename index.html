@@ -1245,71 +1245,53 @@
     <div id="settingsModal" class="modal hidden" style="z-index: 9999;">
         <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="color:var(--primary); margin-top:0;">⚙️ 단가 및 정산 설정</h3>
-            <label
-                style="background:#333; padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px; margin-bottom:15px; font-size:0.85rem; color:white;">
+            <label style="background:#333; padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px; margin-bottom:15px; font-size:0.85rem; color:white;">
                 <input type="checkbox" id="estMode" style="width:20px; height:20px;"> <b>단가 산정 모드 ON</b>
             </label>
 
-            <div id="tileSettingsArea"
-                style="margin-bottom: 20px; border-bottom: 2px dashed #444; padding-bottom: 15px;">
-                <h4 style="color:var(--primary); margin-top:0; margin-bottom:10px; text-align:left;">📦 타일 종류(디자인) 및 단가
-                    설정</h4>
-                <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px; text-align:left;">자주 쓰는 타일의 박스당 단가를 넣거나,
-                    `+ 추가` 버튼으로 종류별(예: 까라라981) 단가를 직접 만들어 보세요!</div>
+            <div id="tileSettingsArea" style="margin-bottom: 20px; border-bottom: 2px dashed #444; padding-bottom: 15px;">
+                <h4 style="color:var(--primary); margin-top:0; margin-bottom:10px; text-align:left;">📦 타일 종류(디자인) 및 단가 설정</h4>
+                <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px; text-align:left;">자주 쓰는 타일의 박스당 단가를 넣거나, `+ 추가` 버튼으로 종류별(예: 까라라981) 단가를 직접 만들어 보세요!</div>
                 <div id="tileSettingsList" style="text-align:left;"></div>
-                <div
-                    style="display:flex; gap:5px; margin-top:15px; padding:10px; background:rgba(255,215,0,0.05); border-radius:10px; border:1px dashed var(--primary); align-items:center;">
-                    <input type="number" id="newSpecW" placeholder="가로"
-                        style="flex:1; padding:8px; font-size:0.9rem; border:1px solid #444; background:#111; color:#fff; border-radius:6px; margin:0; text-align:center;">
+                <div style="display:flex; gap:5px; margin-top:15px; padding:10px; background:rgba(255,215,0,0.05); border-radius:10px; border:1px dashed var(--primary); align-items:center;">
+                    <input type="number" id="newSpecW" placeholder="가로" style="flex:1; padding:8px; font-size:0.9rem; border:1px solid #444; background:#111; color:#fff; border-radius:6px; margin:0; text-align:center;">
                     <span style="color:#aaa; font-weight:bold; padding:0 2px;">×</span>
-                    <input type="number" id="newSpecH" placeholder="세로"
-                        style="flex:1; padding:8px; font-size:0.9rem; border:1px solid #444; background:#111; color:#fff; border-radius:6px; margin:0; text-align:center;">
-                    <button class="action-btn done-btn"
-                        style="flex:1; font-weight:bold; padding:8px; border-radius:6px; font-size:0.8rem; min-width:60px;"
-                        onclick="addNewTileSpec()">+ 추가</button>
+                    <input type="number" id="newSpecH" placeholder="세로" style="flex:1; padding:8px; font-size:0.9rem; border:1px solid #444; background:#111; color:#fff; border-radius:6px; margin:0; text-align:center;">
+                    <button class="action-btn done-btn" style="flex:1; font-weight:bold; padding:8px; border-radius:6px; font-size:0.8rem; min-width:60px;" onclick="addNewTileSpec()">+ 추가</button>
                 </div>
-
             </div>
 
-            <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px; text-align:left;">※ 항목 이름을 길게 누르면 제품명을 변경할 수
-                있습니다.</div>
+            <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px; text-align:left;">※ 항목 이름을 길게 누르면 제품명을 변경할 수 있습니다.</div>
+            
             <div id="priceInputsArea" style="padding-right:5px;">
-                <div class="price-input-row" ontouchstart="startBrandPress('sera')" ontouchend="endBrandPress()"
-                    onmousedown="startBrandPress('sera')" onmouseup="endBrandPress()">
+                <div class="price-input-row" ontouchstart="startBrandPress('sera')" ontouchend="endBrandPress()" onmousedown="startBrandPress('sera')" onmouseup="endBrandPress()">
                     <div class="price-label" id="lbl_sera">타일본드</div>
                     <div class="price-val">
-                        <input type="text" id="price_sera" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_sera" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_sera')">✖</span>
                     </div>
                 </div>
-                <div class="price-input-row" ontouchstart="startBrandPress('epoxy')" ontouchend="endBrandPress()"
-                    onmousedown="startBrandPress('epoxy')" onmouseup="endBrandPress()">
+                <div class="price-input-row" ontouchstart="startBrandPress('epoxy')" ontouchend="endBrandPress()" onmousedown="startBrandPress('epoxy')" onmouseup="endBrandPress()">
                     <div class="price-label" id="lbl_epoxy">에폭시</div>
                     <div class="price-val">
-                        <input type="text" id="price_epoxy" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_epoxy" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_epoxy')">✖</span>
                     </div>
                 </div>
-                <div class="price-input-row" ontouchstart="startBrandPress('ddu')" ontouchend="endBrandPress()"
-                    onmousedown="startBrandPress('ddu')" onmouseup="endBrandPress()">
+                <div class="price-input-row" ontouchstart="startBrandPress('ddu')" ontouchend="endBrandPress()" onmousedown="startBrandPress('ddu')" onmouseup="endBrandPress()">
                     <div class="price-label" id="lbl_ddu">떠붙임</div>
                     <div class="price-val">
-                        <input type="text" id="price_ddu" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_ddu" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_ddu')">✖</span>
                     </div>
                 </div>
-                <div class="price-input-row" ontouchstart="startBrandPress('press')" ontouchend="endBrandPress()"
-                    onmousedown="startBrandPress('press')" onmouseup="endBrandPress()">
+                <div class="price-input-row" ontouchstart="startBrandPress('press')" ontouchend="endBrandPress()" onmousedown="startBrandPress('press')" onmouseup="endBrandPress()">
                     <div class="price-label" id="lbl_press">압착/폴리머</div>
                     <div class="price-val">
-                        <input type="text" id="price_press" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_press" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_press')">✖</span>
                     </div>
@@ -1317,8 +1299,7 @@
                 <div class="price-input-row">
                     <div class="price-label">매지/1kg기준 단가입력</div>
                     <div class="price-val">
-                        <input type="text" id="price_magi" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_magi" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_magi')">✖</span>
                     </div>
@@ -1326,8 +1307,7 @@
                 <div class="price-input-row">
                     <div class="price-label">바닥레미탈</div>
                     <div class="price-val">
-                        <input type="text" id="price_remital" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_remital" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_remital')">✖</span>
                     </div>
@@ -1335,8 +1315,7 @@
                 <div class="price-input-row">
                     <div class="price-label">면치기</div>
                     <div class="price-val">
-                        <input type="text" id="price_myeon" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_myeon" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_myeon')">✖</span>
                     </div>
@@ -1344,8 +1323,7 @@
                 <div class="price-input-row">
                     <div class="price-label">코너비드</div>
                     <div class="price-val">
-                        <input type="text" id="price_bead" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_bead" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_bead')">✖</span>
                     </div>
@@ -1353,8 +1331,7 @@
                 <div class="price-input-row">
                     <div class="price-label">평탄클립/암수 1봉씩 <br> 2봉기준</div>
                     <div class="price-val">
-                        <input type="text" id="price_clip" inputmode="numeric" placeholder="암만 구매시 1봉지 단가 입력"
-                            oninput="formatComma(this); toggleClear(this)" style="font-size:0.8rem; padding:8px 4px;">
+                        <input type="text" id="price_clip" inputmode="numeric" placeholder="암만 구매시 단가" oninput="formatComma(this); toggleClear(this)" style="font-size:0.8rem; padding:8px 4px;">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_clip')">✖</span>
                     </div>
@@ -1362,8 +1339,7 @@
                 <div class="price-input-row">
                     <div class="price-label">폐기마대</div>
                     <div class="price-val">
-                        <input type="text" id="price_bag" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_bag" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_bag')">✖</span>
                     </div>
@@ -1371,55 +1347,54 @@
                 <div class="price-input-row">
                     <div class="price-label">폐기물 1트럭</div>
                     <div class="price-val">
-                        <input type="text" id="price_truck" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_truck" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_truck')">✖</span>
                     </div>
                 </div>
-                <div
-                    style="background:#222; padding:12px; border-radius:10px; border:1px solid #444; margin-bottom:10px;">
-                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:12px;">👷‍♂️ 인건비
-                        산정 기준 (택 1)</div>
 
+                <div style="background:#1a1a1a; padding:12px; border-radius:10px; border:1px dashed var(--primary); margin-bottom:10px;">
+                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:10px;">👷‍♂️ 1인 하루 시공 목표량 (품수 기준)</div>
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <button class="action-btn" style="flex:1; background:#333; color:#fff; font-size:0.75rem; padding:8px;" onclick="document.getElementById('labor_capacity_py').value=6.5; isSettingsChanged=true;">표준(6.5평)</button>
+                        <button class="action-btn" style="flex:1; background:#333; color:#fff; font-size:0.75rem; padding:8px;" onclick="document.getElementById('labor_capacity_py').value=4.0; isSettingsChanged=true;">복잡(4평)</button>
+                        <button class="action-btn" style="flex:1; background:#333; color:#fff; font-size:0.75rem; padding:8px;" onclick="document.getElementById('labor_capacity_py').value=2.5; isSettingsChanged=true;">최상(2.5평)</button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="flex:1.2; font-size:0.75rem; color:#ccc; font-weight:bold; text-align:left;">직접 입력 (평)</label>
+                        <div class="price-val">
+                            <input type="number" id="labor_capacity_py" placeholder="6.5" step="0.1" style="width:100%; padding:8px; text-align:right;" oninput="isSettingsChanged = true;">
+                            <span style="font-size:0.8rem; color:#aaa; white-space:nowrap; margin-left:4px;">평</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background:#222; padding:12px; border-radius:10px; border:1px solid #444; margin-bottom:10px;">
+                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:12px; text-align:left;">👷‍♂️ 인건비 산정 기준 (택 1)</div>
                     <div class="price-input-row" style="margin-bottom:8px;">
-                        <label
-                            style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
-                            <input type="checkbox" id="chk_labor_pum" checked
-                                style="width:18px; height:18px; accent-color:var(--primary);"
-                                onchange="selectLaborMode('pum')"> 기공 품 당
+                        <label style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
+                            <input type="checkbox" id="chk_labor_pum" checked style="width:18px; height:18px; accent-color:var(--primary);" onchange="selectLaborMode('pum')"> 기공 품 당
                         </label>
                         <div class="price-val">
-                            <input type="text" id="price_tech_pum" inputmode="numeric" placeholder="0"
-                                oninput="formatComma(this); toggleClear(this)">
+                            <input type="text" id="price_tech_pum" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                             <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         </div>
                     </div>
-
                     <div class="price-input-row" style="margin-bottom:8px;">
-                        <label
-                            style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
-                            <input type="checkbox" id="chk_labor_pyeong"
-                                style="width:18px; height:18px; accent-color:var(--primary);"
-                                onchange="selectLaborMode('pyeong')"> 타일(2박스) 평 당
+                        <label style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
+                            <input type="checkbox" id="chk_labor_pyeong" style="width:18px; height:18px; accent-color:var(--primary);" onchange="selectLaborMode('pyeong')"> 타일(2박스) 평 당
                         </label>
                         <div class="price-val">
-                            <input type="text" id="price_tech_pyeong" inputmode="numeric" placeholder="0" disabled
-                                style="opacity:0.4;" oninput="formatComma(this); toggleClear(this)">
+                            <input type="text" id="price_tech_pyeong" inputmode="numeric" placeholder="0" disabled style="opacity:0.4;" oninput="formatComma(this); toggleClear(this)">
                             <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         </div>
                     </div>
-
                     <div class="price-input-row" style="margin-bottom:0;">
-                        <label
-                            style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
-                            <input type="checkbox" id="chk_labor_hebe"
-                                style="width:18px; height:18px; accent-color:var(--primary);"
-                                onchange="selectLaborMode('hebe')"> 시공 헤베 당
+                        <label style="flex:1.2; display:flex; align-items:center; gap:8px; font-size:0.75rem; color:#ccc; font-weight:bold; cursor:pointer;">
+                            <input type="checkbox" id="chk_labor_hebe" style="width:18px; height:18px; accent-color:var(--primary);" onchange="selectLaborMode('hebe')"> 시공 헤베 당
                         </label>
                         <div class="price-val">
-                            <input type="text" id="price_tech_hebe" inputmode="numeric" placeholder="0" disabled
-                                style="opacity:0.4;" oninput="formatComma(this); toggleClear(this)">
+                            <input type="text" id="price_tech_hebe" inputmode="numeric" placeholder="0" disabled style="opacity:0.4;" oninput="formatComma(this); toggleClear(this)">
                             <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         </div>
                     </div>
@@ -1428,8 +1403,7 @@
                 <div class="price-input-row">
                     <div class="price-label">매지 품 </div>
                     <div class="price-val">
-                        <input type="text" id="price_magi_labor" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_magi_labor" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_magi_labor')">✖</span>
                     </div>
@@ -1437,8 +1411,7 @@
                 <div class="price-input-row">
                     <div class="price-label">식대 (1품당)</div>
                     <div class="price-val">
-                        <input type="text" id="price_meal" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_meal" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_meal')">✖</span>
                     </div>
@@ -1446,8 +1419,7 @@
                 <div class="price-input-row">
                     <div class="price-label">부대비용</div>
                     <div class="price-val">
-                        <input type="text" id="price_misc" inputmode="numeric" placeholder="숙박, 유류비 등"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_misc" inputmode="numeric" placeholder="숙박, 유류비 등" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">원</span>
                         <span class="clear-btn" onclick="clearInput('price_misc')">✖</span>
                     </div>
@@ -1455,17 +1427,13 @@
                 <div class="price-input-row">
                     <div class="price-label">전체 마진 비율</div>
                     <div class="price-val">
-                        <input type="text" id="price_margin" inputmode="numeric" placeholder="0"
-                            oninput="formatComma(this); toggleClear(this)">
+                        <input type="text" id="price_margin" inputmode="numeric" placeholder="0" oninput="formatComma(this); toggleClear(this)">
                         <span style="font-size:0.8rem; color:#aaa; white-space:nowrap;">%</span>
                         <span class="clear-btn" onclick="clearInput('price_margin')">✖</span>
                     </div>
                 </div>
             </div>
-            <button class="action-btn done-btn"
-                style="width:100%; margin-top:15px; padding:15px; border-radius:12px; font-weight:bold;"
-                onclick="saveAndCloseSettings()">저장 및 닫기</button>
-                
+            <button class="action-btn done-btn" style="width:100%; margin-top:15px; padding:15px; border-radius:12px; font-weight:bold;" onclick="saveAndCloseSettings()">저장 및 닫기</button>
         </div>
     </div>
 
@@ -1893,15 +1861,23 @@ function getTodayString() {
     return `_${yy}.${mm}.${dd}`; 
 }
 
-function calcLaborCost({ totalArea, totalBox, techPum }) {
+function calcLaborCost({ totalArea, totalBox }) {
     const laborMode = localStorage.getItem('labor_mode') || 'pum';
+    // 💡 평 단위로 저장된 목표량을 불러와서 헤베(m2)로 자동 변환 후 계산!
+    let capacityPy = parseFloat(localStorage.getItem('labor_capacity_py')) || 6.5;
+    let capacityM2 = capacityPy * 3.3058;
+    let techPum = Math.ceil(totalArea / capacityM2);
+    
     let techCost = 0, techHtml = '', techText = '';
+
+    let pyTotal = (totalArea / 3.3058).toFixed(1);
+    let pyCap = capacityPy.toFixed(1); // 💡 이미 평 단위이므로 그대로 사용
 
     if (laborMode === 'pum') {
         const p = getPriceStr('price_tech_pum');
         techCost = techPum * p;
-        techHtml = `기공(품당): ${techPum.toFixed(1)}품 x ${p.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원`;
-        techText = `기공(품당): ${techPum.toFixed(1)}품 (${Math.round(techCost).toLocaleString()}원)\n`;
+        techHtml = `기공(품당): 총 ${pyTotal}평 / 1인 ${pyCap}평 시공 기준 = ${techPum.toFixed(1)}품 <br><span style="font-size:0.8rem; color:#aaa;">(${techPum.toFixed(1)}품 x ${p.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원)</span>`;
+        techText = `기공(품당): 총 ${pyTotal}평 / 1인 ${pyCap}평 시공 기준 = ${techPum.toFixed(1)}품 (${Math.round(techCost).toLocaleString()}원)\n`;
     } else if (laborMode === 'pyeong') {
         const count = totalBox / 2;
         const p = getPriceStr('price_tech_pyeong');
@@ -1914,7 +1890,7 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
         techHtml = `기공(헤베당): ${totalArea.toFixed(1)}m² x ${p.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원`;
         techText = `기공(헤베당): ${totalArea.toFixed(1)}m² (${Math.round(techCost).toLocaleString()}원)\n`;
     }
-    return { laborMode, techCost, techHtml, techText };
+    return { laborMode, techCost, techHtml, techText, techPum, capacityM2 };
 }
         // --- 기본 변수 및 유틸 ---
         let inheritedFloorName = ''; // 💡 혜린 패치: 자동 생성된 바닥 이름 기억용
@@ -2152,6 +2128,10 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
             b_keys.forEach(k => { let v = localStorage.getItem(k); if (v && document.getElementById(k)) document.getElementById(k).innerText = v; });
             if (document.getElementById('estMode')) document.getElementById('estMode').checked = localStorage.getItem('estMode') === 'true';
 
+            // 💡 하루 시공 목표량 불러오기 (평 단위)
+            let cap = localStorage.getItem('labor_capacity_py') || "6.5";
+            if (document.getElementById('labor_capacity_py')) document.getElementById('labor_capacity_py').value = cap;
+
             let laborMode = localStorage.getItem('labor_mode') || 'pum';
             if (window.selectLaborMode) window.selectLaborMode(laborMode);
         }
@@ -2162,11 +2142,15 @@ function calcLaborCost({ totalArea, totalBox, techPum }) {
             keys.forEach(k => { localStorage.setItem(k, document.getElementById(k).value.replace(/,/g, '')); });
             localStorage.setItem('estMode', document.getElementById('estMode').checked);
 
-            // 혜린 패치: 지금 체크되어 있는 인건비 모드(pum/pyeong/hebe) 찾아내서 저장하기
             let laborMode = 'pum';
             if (document.getElementById('chk_labor_pyeong') && document.getElementById('chk_labor_pyeong').checked) laborMode = 'pyeong';
             if (document.getElementById('chk_labor_hebe') && document.getElementById('chk_labor_hebe').checked) laborMode = 'hebe';
             localStorage.setItem('labor_mode', laborMode);
+
+            // 💡 하루 시공 목표량 저장하기 (평 단위)
+            if (document.getElementById('labor_capacity_py')) {
+                localStorage.setItem('labor_capacity_py', document.getElementById('labor_capacity_py').value || "6.5");
+            }
 
             localStorage.setItem('tileData', JSON.stringify(tileData));
 
@@ -3082,9 +3066,11 @@ let displayQty = item.subQty;
                 </div>`;
                 text += `${item.idName}: ${tileInfo}${item.subName} ${displayQty}${item.subUnit}\n`;
 
-                // 인건비용 총합 계산 (인건비 기준 박스수는 올림 사용)
-                totalAreaSum += parseFloat(item.area || 0);
-                if (['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType)) totalBoxNum += itemTileRounded;
+                // 💡 [중복 방지] 타일 시공일 때만 면적과 박스수를 인건비용으로 누적합니다.
+                if (['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType)) {
+                    totalAreaSum += parseFloat(item.area || 0);
+                    totalBoxNum += itemTileRounded;
+                }
                 if (item.tabType === 'magi') {
                     let qtyMatch = item.subQty.toString().match(/[0-9.]+/);
                     totalMagiKg += qtyMatch ? parseFloat(qtyMatch[0]) : 0;
@@ -3154,20 +3140,34 @@ let displayQty = item.subQty;
             text += `\n♻️ 예상 폐기물 마대: 약 ${ppBags}포 (전체 ${totalAreaSum.toFixed(1)}m² 기준)\n`;
 
             if (isEst) {
-                let techPum = Math.ceil(totalAreaSum / 21.48);
+                // 💡 평 단위로 저장된 목표량을 가져와 헤베로 변환해서 계산!
+                let capacityPy = parseFloat(localStorage.getItem('labor_capacity_py')) || 6.5;
+                let capacityM2 = capacityPy * 3.3058;
+                let techPum = Math.ceil(totalAreaSum / capacityM2);
                 let magiPum = Math.ceil(totalMagiKg / 25);
                 let numTrucks = Math.ceil(ppBags / 50);
                 
                 let laborMode = localStorage.getItem('labor_mode') || 'pum';
                 let techCost = 0, tLabel = "", tQty = 0, tPrice = 0;
                 
-                if (laborMode === 'pum') { tPrice = getPriceStr('price_tech_pum'); tQty = techPum; tLabel = "기공(품)"; }
-                else if (laborMode === 'pyeong') { tPrice = getPriceStr('price_tech_pyeong'); tQty = totalBoxNum / 2; tLabel = "기공(평)"; }
-                else { tPrice = getPriceStr('price_tech_hebe'); tQty = totalAreaSum; tLabel = "기공(헤베)"; }
+                let pyTotal = (totalAreaSum / 3.3058).toFixed(1);
+                let pyCap = capacityPy.toFixed(1); // 💡 이미 평 단위이므로 그대로 사용
+
+                if (laborMode === 'pum') { tPrice = getPriceStr('price_tech_pum'); tQty = techPum; tLabel = "기공(품당)"; }
+                else if (laborMode === 'pyeong') { tPrice = getPriceStr('price_tech_pyeong'); tQty = totalBoxNum / 2; tLabel = "기공(평당)"; }
+                else { tPrice = getPriceStr('price_tech_hebe'); tQty = totalAreaSum; tLabel = "기공(헤베당)"; }
                 
                 techCost = tQty * tPrice;
-                let techHtml = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원`;
-                let techText = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원\n`;
+                
+                let techHtml = "";
+                let techText = "";
+                if (laborMode === 'pum') {
+                    techHtml = `${tLabel}: 총 ${pyTotal}평 / 1인 ${pyCap}평 시공 기준 = ${tQty.toFixed(1)}품 <br><span style="font-size:0.8rem; color:#aaa;">(${tQty.toFixed(1)}품 x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원)</span>`;
+                    techText = `${tLabel}: 총 ${pyTotal}평 / 1인 ${pyCap}평 시공 기준 = ${tQty.toFixed(1)}품 (${Math.round(techCost).toLocaleString()}원)\n`;
+                } else {
+                    techHtml = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원`;
+                    techText = `${tLabel}: ${tQty.toFixed(1)} x ${tPrice.toLocaleString()}원 = ${Math.round(techCost).toLocaleString()}원\n`;
+                }
 
                 let magiLaborPrice = getPriceStr('price_magi_labor');
                 let bagPrice = getPriceStr('price_bag');
@@ -3480,10 +3480,13 @@ let displayQty = item.subQty;
                     // 💡 [수정] 통합 발주에서도 개별 항목을 먼저 무조건 올림 처리합니다!
                     let itemTileRounded = Math.ceil(parseFloat(item.tile) || 0);
 
-                    totalArea += parseFloat(item.area) || 0;
-                    if (item.tabType === 'magi') totalMagiKg += qtyNum;
-
                     let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
+
+                    // 💡 [중복 방지] 타일 시공 탭일 때만 전체 면적에 더해줍니다.
+                    if (!isSpecial) {
+                        totalArea += parseFloat(item.area) || 0;
+                    }
+                    if (item.tabType === 'magi') totalMagiKg += qtyNum;
 
                     if (!isSpecial && itemTileRounded > 0) {
                         // 💡 [수정] 구역 이름(idName)이나 디자인명이 다르면 별도로 취합합니다!
@@ -3568,12 +3571,8 @@ let displayQty = item.subQty;
             html += `<div style="margin-top:15px; padding:12px; background:#111; border-radius:10px; border:1.5px solid var(--primary); text-align:left;"><div style="color:var(--primary); font-weight:900;">♻️ 전체 통합 폐기물 마대 (PP)</div><div style="font-size:1.1rem; font-weight:bold;">총 ${ppBags}포 필요 <small style="color:#aaa; font-size:0.7rem;">(전체 ${totalArea.toFixed(1)}m² 기준)</small></div></div>`;
             integratedTextResult += `♻️ 통합 폐기물 마대: 총 ${ppBags}포 (전체 ${totalArea.toFixed(1)}m² 기준)\n`;
             
-            // ▼ 날아갈 뻔했던 원본 정산/인건비 로직 완벽 복구
+            // ▼ 다세대 통합 정산/인건비 로직 (평 단위 목표량 연동 완료)
             if (isEst) {
-                let techPum = Math.ceil(totalArea / 21.48);
-                let magiPum = Math.ceil(totalMagiKg / 25);
-                let numTrucks = Math.ceil(ppBags / 50);
-
                 let totalBoxForLabor = 0;
                 integratedList.forEach(site => {
                     site.reportData.forEach(item => {
@@ -3584,7 +3583,11 @@ let displayQty = item.subQty;
                     });
                 });
 
-                const { laborMode, techCost, techHtml, techText } = calcLaborCost({ totalArea: totalArea, totalBox: totalBoxForLabor, techPum });
+                // 💡 새롭게 '평(py)' 단위로 계산해주는 함수를 호출해서 techPum 등 모든 값을 받아옵니다.
+                const { laborMode, techCost, techHtml, techText, techPum } = calcLaborCost({ totalArea: totalArea, totalBox: totalBoxForLabor });
+
+                let magiPum = Math.ceil(totalMagiKg / 25);
+                let numTrucks = Math.ceil(ppBags / 50);
 
                 let mPrice = getPriceStr('price_magi_labor');
                 let bPrice = getPriceStr('price_bag');
@@ -3606,8 +3609,8 @@ let displayQty = item.subQty;
                 let totalGrand = subTotal + marginCost;
 
                 html += `<div style="border-top:1px dashed #444; padding-top:10px; margin-top:15px; text-align:left;"><div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">💰 통합 견적 정산</div>`;
-                if (totalTileCost > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTileCost).toLocaleString()}원</div>`; integratedTextResult += `타일 자재비: ${Math.round(totalTileCost).toLocaleString()}원\n`; }
-                if (totalSubCost > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubCost).toLocaleString()}원</div>`; integratedTextResult += `부자재비 소계: ${Math.round(totalSubCost).toLocaleString()}원\n`; }
+                if (totalTilePriceSum > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원</div>`; integratedTextResult += `타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원\n`; }
+                if (totalSubMatPriceSum > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원</div>`; integratedTextResult += `부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원\n`; }
 
                 if (techCost > 0) { html += `<div style="font-size:0.85rem;">${techHtml}</div>`; integratedTextResult += techText; }
 
