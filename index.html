@@ -1353,7 +1353,7 @@
                     </div>
                 </div>
 
-                <div style="background:#1a1a1a; padding:12px; border-radius:10px; border:1px dashed var(--primary); margin-bottom:10px;">
+<div style="background:#1a1a1a; padding:12px; border-radius:10px; border:1px dashed var(--primary); margin-bottom:10px;">
                     <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:10px;">👷‍♂️ 1인 하루 시공 목표량 (품수 기준)</div>
                     <div style="display:flex; gap:5px; margin-bottom:10px;">
                         <button class="action-btn" style="flex:1; background:#333; color:#fff; font-size:0.75rem; padding:8px;" onclick="document.getElementById('labor_capacity_py').value=6.5; isSettingsChanged=true;">표준(6.5평)</button>
@@ -3427,12 +3427,15 @@ let displayQty = item.subQty;
             setTimeout(() => document.getElementById('editNameInput').focus(), 50);
         }
 
+        func// 💡 [패치] 과거 데이터 누락 시 에러 방지 방어막 완벽 적용
         function updateIntegratedPricesBeforeRender() {
             integratedList.forEach(site => {
+                if (!site.reportData) return; // 과거 데이터 누락 방어
                 site.reportData.forEach(item => {
-                    if (item.tabType === 'magi' || item.subName.includes('면치기') || item.subName.includes('코너비드')) return;
+                    // subName 자체가 없는 아주 옛날 데이터 대응 안전장치
+                    if (item.tabType === 'magi' || (item.subName && (item.subName.includes('면치기') || item.subName.includes('코너비드')))) return;
                     let currentTPrice = 0;
-                    if (tileData[item.spec]) {
+                    if (item.spec && tileData[item.spec]) {
                         if (!item.tileDesign || item.tileDesign === '기본') {
                             currentTPrice = tileData[item.spec].basePrice;
                         } else {
@@ -3470,26 +3473,24 @@ let displayQty = item.subQty;
 
             html += `<h4 style="color:var(--primary); text-align:left; margin-bottom:5px;">[ 개별 현장 내역 ]</h4>`;
             integratedList.forEach(site => {
+                if (!site.reportData) return; // 과거 데이터 누락 방어
+
                 html += `<div style="text-align:left; border:1px solid #444; padding:10px; margin-bottom:10px; border-radius:8px; background:#111;">`;
                 html += `<div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">📍 ${site.site}</div>`;
                 integratedTextResult += `📍 ${site.site}\n`;
 
                 site.reportData.forEach(item => {
-                    let qtyNum = parseFloat(item.subQty.toString().replace(/[^0-9.]/g, '')) || 0;
-                    
-                    // 💡 [수정] 통합 발주에서도 개별 항목을 먼저 무조건 올림 처리합니다!
+                    // subQty가 비어있는 과거 데이터 대응
+                    let qtyNum = parseFloat((item.subQty || "0").toString().replace(/[^0-9.]/g, '')) || 0;
                     let itemTileRounded = Math.ceil(parseFloat(item.tile) || 0);
-
                     let isSpecial = !(['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType));
 
-                    // 💡 [중복 방지] 타일 시공 탭일 때만 전체 면적에 더해줍니다.
                     if (!isSpecial) {
                         totalArea += parseFloat(item.area) || 0;
                     }
                     if (item.tabType === 'magi') totalMagiKg += qtyNum;
 
                     if (!isSpecial && itemTileRounded > 0) {
-                        // 💡 [수정] 구역 이름(idName)이나 디자인명이 다르면 별도로 취합합니다!
                         let tKey = (item.tileDesign && item.tileDesign !== '기본') 
                                    ? `[${item.idName}] ${item.spec} (${item.tileDesign})` 
                                    : `[${item.idName}] ${item.spec}`;
@@ -3498,22 +3499,19 @@ let displayQty = item.subQty;
                         tileAgg[tKey].qty += itemTileRounded;
                     }
 
-                    // 💡 통합 발주에서도 레미탈을 하나의 항목으로 통합하고 정밀 수치로 합산합니다.
                     let isRemitalSub = (item.tabType === 'remital');
-                    let subKey = isRemitalSub ? "레미탈" : item.subName;
+                    let subKey = isRemitalSub ? "레미탈" : (item.subName || "기타부자재");
                     if (!agg[subKey]) agg[subKey] = { unit: item.subUnit, qty: 0, tabType: item.tabType };
                     
-                    // 정밀수치(rawSubQty)가 있다면 그걸로 합산해야 오차가 없습니다.
                     let addQty = (isRemitalSub && item.rawSubQty) ? parseFloat(item.rawSubQty) : qtyNum;
                     agg[subKey].qty += addQty;
 
-                    // 💡 통합 발주 화면에서도 코너비드/면치기 원본 수량 유지!
-                    let displayQty = item.subQty;
+                    let displayQty = item.subQty || "0";
                     let rawNum = parseFloat(item.rawSubQty);
                     if (!isSpecial && !isNaN(rawNum) && rawNum > 0) {
                         displayQty = rawNum.toFixed(1);
                     } else if (item.tabType === 'clip') {
-                        displayQty = "암수 각각 " + item.subQty;
+                        displayQty = "암수 각각 " + (item.subQty || "0");
                     }
 
                     let priceTxt = "";
@@ -3522,19 +3520,17 @@ let displayQty = item.subQty;
                         let pSub = getPriceStr('price_' + item.tabType);
                         let sumSub = pSub * qtyNum;
                         priceTxt = ` (${sumSub.toLocaleString()}원)`;
-                        if (!isSpecial && item.tilePrice > 0 && itemTileExact > 0) {
-                            let sumTile = item.tilePrice * itemTileExact;
+                        if (!isSpecial && item.tilePrice > 0 && itemTileRounded > 0) {
+                            let sumTile = item.tilePrice * itemTileRounded;
                             priceTxt = ` <span style="color:#aaa;">(타일:${Math.round(sumTile).toLocaleString()}원/부자재:${sumSub.toLocaleString()}원)</span>`;
                         }
                     }
                     if (!isSpecial) {
-                        tileInfo = `타일:${itemTileExact.toFixed(1)}박스 / `;
+                        tileInfo = `타일:${(parseFloat(item.tile) || 0).toFixed(1)}박스 / `;
                     }
 
-                    // 💡 item.subQty 대신 보호받은 displayQty를 화면과 텍스트에 출력
-                    html += `<div style="font-size:0.85rem; color:#ccc;">- [${item.idName}] ${tileInfo}${item.subName}: ${displayQty}${item.subUnit}${priceTxt}</div>`;
-                    integratedTextResult += `- [${item.idName}] ${tileInfo}${item.subName}: ${displayQty}${item.subUnit}\n`;
-
+                    html += `<div style="font-size:0.85rem; color:#ccc;">- [${item.idName}] ${tileInfo}${item.subName || ""}: ${displayQty}${item.subUnit || ""}${priceTxt}</div>`;
+                    integratedTextResult += `- [${item.idName}] ${tileInfo}${item.subName || ""}: ${displayQty}${item.subUnit || ""}\n`;
                 });
                 html += `</div>`;
                 integratedTextResult += `\n`;
@@ -3561,30 +3557,27 @@ let displayQty = item.subQty;
                 let sum = p * agg[key].qty;
                 if (isEst) { totalMatPrice += sum; totalSubCost += sum; }
                 let priceTxt = isEst && p > 0 ? ` <br><span style="font-size:0.8rem; color:#aaa; font-weight:normal;">(단가:${p.toLocaleString()}원 / 소계:${sum.toLocaleString()}원)</span>` : '';
-                html += `<div style="font-size:0.95rem; font-weight:bold; margin-bottom:8px; border-bottom:1px dashed #444; padding-bottom:4px;">✅ ${key}: <span style="color:#ff4444; font-size:1.1rem;">${agg[key].qty}</span>${agg[key].unit}${priceTxt}</div>`;
-                integratedTextResult += `✅ ${key}: ${agg[key].qty}${agg[key].unit}\n`;
+                html += `<div style="font-size:0.95rem; font-weight:bold; margin-bottom:8px; border-bottom:1px dashed #444; padding-bottom:4px;">✅ ${key}: <span style="color:#ff4444; font-size:1.1rem;">${Math.ceil(agg[key].qty)}</span>${agg[key].unit}${priceTxt}</div>`;
+                integratedTextResult += `✅ ${key}: ${Math.ceil(agg[key].qty)}${agg[key].unit}\n`;
             }
             html += `</div>`;
             integratedTextResult += `\n`;
 
-            // 💡 [수정] 통합 발주 폐기물 마대 기준 변경: 3평당 1포
             const ppBags = Math.max(1, Math.ceil((totalArea / 3.3058) / 3));
             html += `<div style="margin-top:15px; padding:12px; background:#111; border-radius:10px; border:1.5px solid var(--primary); text-align:left;"><div style="color:var(--primary); font-weight:900;">♻️ 전체 통합 폐기물 마대 (PP)</div><div style="font-size:1.1rem; font-weight:bold;">총 ${ppBags}포 필요 <small style="color:#aaa; font-size:0.7rem;">(3평당 1포 기준)</small></div></div>`;
             integratedTextResult += `♻️ 통합 폐기물 마대: 총 ${ppBags}포 (전체 ${totalArea.toFixed(1)}m² 기준)\n`;
             
-            // ▼ 다세대 통합 정산/인건비 로직 (평 단위 목표량 연동 완료)
             if (isEst) {
                 let totalBoxForLabor = 0;
                 integratedList.forEach(site => {
+                    if (!site.reportData) return;
                     site.reportData.forEach(item => {
                         if (['sera', 'epoxy', 'ddu', 'press'].includes(item.tabType)) {
-                            // 💡 인건비 계산용 박스수도 동일하게 올림 적용
                             totalBoxForLabor += Math.ceil(parseFloat(item.tile) || 0); 
                         }
                     });
                 });
 
-                // 💡 새롭게 '평(py)' 단위로 계산해주는 함수를 호출해서 techPum 등 모든 값을 받아옵니다.
                 const { laborMode, techCost, techHtml, techText, techPum } = calcLaborCost({ totalArea: totalArea, totalBox: totalBoxForLabor });
 
                 let magiPum = Math.ceil(totalMagiKg / 25);
@@ -3610,8 +3603,10 @@ let displayQty = item.subQty;
                 let totalGrand = subTotal + marginCost;
 
                 html += `<div style="border-top:1px dashed #444; padding-top:10px; margin-top:15px; text-align:left;"><div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">💰 통합 견적 정산</div>`;
-                if (totalTilePriceSum > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원</div>`; integratedTextResult += `타일 자재비: ${Math.round(totalTilePriceSum).toLocaleString()}원\n`; }
-                if (totalSubMatPriceSum > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원</div>`; integratedTextResult += `부자재비 소계: ${Math.round(totalSubMatPriceSum).toLocaleString()}원\n`; }
+                
+                // 💡 [완벽 수정 완료] 변수명 에러 제거!
+                if (totalTileCost > 0) { html += `<div style="font-size:0.85rem;">타일 자재비: ${Math.round(totalTileCost).toLocaleString()}원</div>`; integratedTextResult += `타일 자재비: ${Math.round(totalTileCost).toLocaleString()}원\n`; }
+                if (totalSubCost > 0) { html += `<div style="font-size:0.85rem;">부자재비 소계: ${Math.round(totalSubCost).toLocaleString()}원</div>`; integratedTextResult += `부자재비 소계: ${Math.round(totalSubCost).toLocaleString()}원\n`; }
 
                 if (techCost > 0) { html += `<div style="font-size:0.85rem;">${techHtml}</div>`; integratedTextResult += techText; }
 
@@ -3640,6 +3635,7 @@ let displayQty = item.subQty;
             document.getElementById('integratedPreviewContent').innerHTML = html;
             document.getElementById('integratedPreviewModal').classList.remove('hidden');
         }
+    
 
 
 
